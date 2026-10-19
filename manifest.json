@@ -1,0 +1,13 @@
+{
+  "name": "Кроха-Ракета / Tiny Rocket",
+  "short_name": "TinyRocket",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#160a30",
+  "theme_color": "#241436",
+  "icons": [
+    { "src": "icon_1024.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" }
+  ]
+}
