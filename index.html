@@ -920,6 +920,7 @@ const VKB = (() => {
     send('VKWebAppCheckNativeAds', {ad_format:'interstitial'}).catch(()=>{});
     send('VKWebAppCheckNativeAds', {ad_format:'reward'}).catch(()=>{});
     bannerInit();
+    if (bannerDesired && !bannerOn) bannerApply();
     adLog('native ads pre-check sent');
   }
   let done = false;
@@ -1050,31 +1051,37 @@ const VKB = (() => {
       });
     }).catch(()=>null);
   }
-  let bannerOn = false, bannerOk = false;
+  let bannerOn = false, bannerOk = false, bannerDesired = false, bannerTries = 0, bannerTimer = 0;
   function bannerInit(){
     if (!bridgeLoaded) return;
     send('VKWebAppCheckBannerAd').then(d => { bannerOk = !!(d && d.result); adLog('banner available: ' + bannerOk); }).catch(()=>{ bannerOk = false; });
   }
-  function banner(on){
+  function bannerApply(){
     if (!bridgeLoaded || standalone()) return;
-    if (on === bannerOn) return;
-    const apply = () => {
-      bannerOn = on;
-      const params = on ? {banner_location:'bottom', banner_align:'left'} : {};
-      send(on ? 'VKWebAppShowBannerAd' : 'VKWebAppHideBannerAd', params)
-        .then(d => adLog('banner ' + (on ? 'shown:' : 'hidden:') + !!(d && d.result)))
-        .catch(e => {
-          adLog('banner error: ' + (e && e.error_type || e));
-          bannerOn = !on;
-          if (on){ setTimeout(()=>{ if (!bannerOn && bannerOk) banner(true); }, 5000); }  // один ретрай
-        });
-    };
-    if (on && !bannerOk){   // перепроверяем доступность и показываем
-      send('VKWebAppCheckBannerAd').then(d => { bannerOk = !!(d && d.result); if (bannerOk) apply(); })
-        .catch(()=>{ bannerOk = false; });
+    if (!bannerDesired){
+      if (bannerOn){ bannerOn = false; send('VKWebAppHideBannerAd', {}).catch(()=>{}); adLog('banner hidden'); }
       return;
     }
-    apply();
+    if (bannerOn) return;
+    bannerTries++;
+    send('VKWebAppShowBannerAd', {banner_location:'bottom', banner_align:'left'})
+      .then(d => {
+        const ok = !!(d && d.result);
+        adLog('banner show try#' + bannerTries + ' → ' + ok);
+        if (ok){ bannerOn = true; bannerTries = 0; }
+        else scheduleBannerRetry();
+      })
+      .catch(e => { adLog('banner error: ' + (e && e.error_type || e)); scheduleBannerRetry(); });
+  }
+  function scheduleBannerRetry(){
+    clearTimeout(bannerTimer);
+    if (!bannerDesired || bannerTries >= 6) return;
+    bannerTimer = setTimeout(() => { bannerInit(); bannerApply(); }, 5000);
+  }
+  function banner(on){
+    bannerDesired = on;
+    if (!on){ clearTimeout(bannerTimer); bannerTries = 0; }
+    onReady(bannerApply);   // применится после готовности бриджа (или сразу)
   }
   const taptic = t => { if (bridgeLoaded) send('VKWebAppTapticImpactOccurred', {type:t}).catch(()=>{}); };
   return {inject, onReady, lang, save, load, taptic, showInterstitial, showRewarded, checkAds, banner,
@@ -2030,7 +2037,7 @@ const GAME = (() => {
   }
   function exitToMap(inter=true){
     G.mode = 'idle'; G.era = eraOf(Math.min(MAX_LEVEL, S.unlocked));
-    SDK.gameplayStop(); SDK.banner(false); Audio.thrust(false); Audio.music(false);
+    SDK.gameplayStop(); Audio.thrust(false); Audio.music(false);
     UI.closeModal('m-pause'); UI.closeModal('m-result'); UI.closeModal('m-continue');
     UI.show((G.endless || G.daily) ? 'scr-start' : 'scr-map');
     if (inter) SDK.interstitial();
@@ -3048,7 +3055,6 @@ const META = (() => {
 
   /* ---------- result modal ---------- */
   function showResult(win, R){
-    SDK.banner(false);
     UI.modal('m-result');
     const G = GAME.G;
     $('resTitle').textContent = G.daily ? L('dailyCh') : (win ? L('cargoDelivered') : L('runOver'));
@@ -3282,6 +3288,7 @@ async function boot(){
   pre.classList.add('hide');
   UI.show('scr-start');
   UI.fullRefresh();
+  SDK.banner(true);   // баннер живёт всю сессию, кроме пауз
   if (!S.seen.help){ S.seen.help = 1; saveLocal(); setTimeout(()=>UI.openHelp(), 450); }
   /* gameStart после первого кадра */
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
