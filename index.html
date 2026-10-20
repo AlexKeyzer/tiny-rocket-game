@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -236,6 +237,12 @@ body{
 
 #scr-start{overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none}
 #scr-start::-webkit-scrollbar{display:none}
+@media (max-width:350px){
+  #scr-start .row .pill.small{font-size:11px;padding:6px 4px;gap:3px}
+  #mapNav .pill{font-size:11px;padding:6px 4px}
+  #mapNav .chip{font-size:10px;padding:4px 6px}
+  #mapFoot .pill{font-size:11px;padding:6px 6px}
+}
 @media (max-height:720px){
   #logo{width:min(31%,150px)}
   #gameTitle{font-size:clamp(24px,7vw,34px)}
@@ -866,42 +873,134 @@ function dailyTick(){
 }
 
 /* ============================== VK BRIDGE ADAPTER ==============================
-   Игра работает трёхмерно: GamePush SDK → VK Bridge → офлайн-фолбэк.
-   VK Bridge даёт: init, язык, облачные хранилище (чанками), taptic.        */
+   Схема рекламы взята из проверенного релизного интеграционного слоя VK:
+   мост грузится ВСЕГДА (2 зеркала), реклама через VKWebAppShowNativeAds
+   (interstitial / reward), проверка готовности VKWebAppCheckNativeAds,
+   пауза по VKWebAppViewHide, язык из vk_language, сохранения чанками.   */
+const adLog = m => { try { console.log('[AD]', m); } catch(e){} };
 const VKB = (() => {
   let send = () => Promise.reject(new Error('no vkbridge'));
-  let inVK = false, ready = false;
+  let inVK = false, bridgeLoaded = false, ready = false;
   const waiters = [];
   const onReady = fn => ready ? fn() : waiters.push(fn);
+  const insideGuess = () => {
+    try {
+      const q = new URLSearchParams(location.search);
+      if (q.has('vk_app_id') || q.has('vk_user_id') || q.has('vk_language')) return true;
+      const ref = document.referrer || '';
+      if (ref.includes('vk.com') || ref.includes('vk.ru')) return true;
+      if ((navigator.userAgent||'').includes('VK')) return true;
+      if (window.parent !== window) return true;
+    } catch(e){}
+    return false;
+  };
+  function adopt(){
+    if (bridgeLoaded || !window.vkBridge) return false;
+    bridgeLoaded = true;
+    send = (m, p) => window.vkBridge.send(m, p);
+    return true;
+  }
+  function afterInit(){
+    try {
+      if (window.vkBridge && window.vkBridge.subscribe) {
+        window.vkBridge.subscribe(ev => {
+          const t = ev && ev.detail && ev.detail.type;
+          if (t === 'VKWebAppViewHide'){ GAME.autoPaused = true; GAME.pause(true); adLog('ViewHide → pause'); }
+          if (t === 'VKWebAppViewRestore' && GAME.autoPaused){ GAME.autoPaused = false; GAME.resume(); adLog('ViewRestore → resume'); }
+        });
+      }
+    } catch(e){}
+    if (inVK){
+      try { send('VKWebAppSetViewSettings', {status_bar_style:'dark', action_bar_color:'#160a30'}).catch(()=>{}); } catch(e){}
+    }
+    preloadChecks();
+    finish();
+  }
+  function preloadChecks(){
+    send('VKWebAppCheckNativeAds', {ad_format:'interstitial'}).catch(()=>{});
+    send('VKWebAppCheckNativeAds', {ad_format:'reward'}).catch(()=>{});
+    adLog('native ads pre-check sent');
+  }
+  let done = false;
+  function finish(){ if (done) return; done = true; ready = true; waiters.splice(0).forEach(f=>{try{f()}catch(e){}}); }
   function inject(){
-    const s = document.createElement('script');
-    s.src = 'https://unpkg.com/@vkontakte/vk-bridge@2.10.0/dist/browser.min.js';
-    const trySecond = () => {
-      const s2 = document.createElement('script');
-      s2.src = 'https://cdn.jsdelivr.net/npm/@vkontakte/vk-bridge@2.10.0/dist/browser.min.js';
-      s2.onload = s.onload; s2.onerror = () => finish();
-      document.head.appendChild(s2);
+    const urls = [
+      'https://unpkg.com/@vkontakte/vk-bridge@2.10.0/dist/browser.min.js',
+      'https://cdn.jsdelivr.net/npm/@vkontakte/vk-bridge@2.10.0/dist/browser.min.js'
+    ];
+    let i = 0;
+    const tryNext = () => {
+      if (i >= urls.length){ adopt(); boot(); return; }
+      const sc = document.createElement('script');
+      sc.src = urls[i++]; sc.async = true;
+      const to = setTimeout(() => { sc.onload = sc.onerror = null; tryNext(); }, 4000);
+      sc.onload = () => { clearTimeout(to); adopt(); boot(); };
+      sc.onerror = () => { clearTimeout(to); tryNext(); };
+      document.head.appendChild(sc);
     };
-    s.onerror = trySecond;
-    s.onload = () => {
-      if (!window.vkBridge){ finish(); return; }
-      send = (m, p) => window.vkBridge.send(m, p);
-      send('VKWebAppInit').then(() => { inVK = true; finish(); }).catch(() => finish());
+    const boot = () => {
+      adopt();   // мост мог быть внедрён платформой даже без наших скриптов
+      if (!bridgeLoaded){ adLog('bridge not loaded → web mode'); inVK = false; finish(); return; }
+      inVK = true;   // мост есть — считаем себя в VK-среде (на десктопе вне VK вызовы просто упадут в catch)
+      send('VKWebAppInit').then(() => { adLog('VKWebAppInit OK'); return send('VKWebAppGetUserInfo').catch(()=>null); })
+        .then(u => { afterInit(); return u; })
+        .catch(() => { inVK = insideGuess(); afterInit(); });
+      setTimeout(() => { if (!done){ inVK = inVK || insideGuess(); afterInit(); } }, 5000);
     };
-    s.onerror = () => finish();
-    document.head.appendChild(s);
-    setTimeout(finish, 5000);
-    let done = false;
-    function finish(){ if (done) return; done = true; ready = true; waiters.splice(0).forEach(f=>{try{f()}catch(e){}}); }
+    tryNext();
   }
   const lang = () => new Promise(res => {
-    if (!inVK) return res(null);
+    try {
+      const q = new URLSearchParams(location.search);
+      const vl = q.get('vk_language') || q.get('language');
+      if (vl === 'ru' || vl === 'en') return res(vl);
+    } catch(e){}
+    if (!bridgeLoaded) return res(null);
     send('VKWebAppGetUserInfo').then(u => res(u && u.lang ? u.lang : null)).catch(()=>res(null));
   });
-  /* чанкованное сохранение: лимит VK на значение ключа */
+  /* вне VK-ифрейма (прямое открытие) не ждём мост: мгновенные фолбэки, как в релизе */
+  const standalone = () => { try { return window.parent === window && !insideGuess(); } catch(e){ return false; } };
+  /* --- реклама: проверенная схема нативных объявлений VK --- */
+  const withTimeout = (pr, ms, fallback) => Promise.race([
+    pr, new Promise(res => setTimeout(() => res(fallback), ms))
+  ]);
+  const checkAds = fmt => standalone() ? Promise.resolve(false) : withTimeout(
+      send('VKWebAppCheckNativeAds', {ad_format:fmt})
+        .then(d => !!(d && d.result)).catch(()=>false), 2500, false);
+  function showInterstitial(){
+    if (!bridgeLoaded || standalone()) return Promise.resolve(false);
+    return withTimeout(
+      send('VKWebAppShowNativeAds', {ad_format:'interstitial'})
+        .then(d => { adLog('interstitial shown'); preloadChecks(); return !!(d && d.result); })
+        .catch(e => { adLog('interstitial error: ' + (e && e.error_type || e)); preloadChecks(); return false; }),
+      20000, false);
+  }
+  /* возвращает 'watched' | 'free' | 'fail' */
+  function showRewarded(){
+    if (!bridgeLoaded || standalone()) return Promise.resolve('free');
+    return checkAds('reward').then(ok => {
+      if (!ok){ adLog('reward materials not ready → grant free'); return 'free'; }
+      let settled = false;
+      return new Promise(res => {
+        const hang = setTimeout(()=>{ if(!settled){settled=true; adLog('reward hang-timeout'); res('fail');} }, 45000);
+        send('VKWebAppShowNativeAds', {ad_format:'reward'}).then(d => {
+          clearTimeout(hang);
+          if (settled) return; settled = true;
+          preloadChecks();
+          res(d && d.result ? 'watched' : 'fail');
+        }).catch(e => {
+          clearTimeout(hang);
+          if (settled) return; settled = true;
+          adLog('reward error: ' + (e && e.error_type || e));
+          preloadChecks(); res('fail');
+        });
+      });
+    });
+  }
+  /* --- сохранения чанками --- */
   const CHUNK = 3500;
   function save(str){
-    if (!inVK) return Promise.resolve(false);
+    if (!bridgeLoaded) return Promise.resolve(false);
     const parts = [];
     for (let i=0; i<str.length; i+=CHUNK) parts.push(str.slice(i, i+CHUNK));
     return send('VKWebAppStorageGetKeys', {count: 1000}).then(keys => {
@@ -914,7 +1013,7 @@ const VKB = (() => {
     }).catch(()=>false);
   }
   function load(){
-    if (!inVK) return Promise.resolve(null);
+    if (!bridgeLoaded) return Promise.resolve(null);
     return send('VKWebAppStorageGetKeys', {count: 1000}).then(keys => {
       const idx = (keys.keys||[]).filter(k => /^trsave\d+$/.test(k)).map(k=>+k.slice(6)).sort((a,b)=>a-b);
       if (!idx.length) return null;
@@ -925,8 +1024,9 @@ const VKB = (() => {
       });
     }).catch(()=>null);
   }
-  const taptic = t => { if (inVK) send('VKWebAppTapticImpactOccurred', {type:t}).catch(()=>{}); };
-  return {inject, onReady, lang, save, load, taptic, get inVK(){ return inVK; }};
+  const taptic = t => { if (bridgeLoaded) send('VKWebAppTapticImpactOccurred', {type:t}).catch(()=>{}); };
+  return {inject, onReady, lang, save, load, taptic, showInterstitial, showRewarded, checkAds,
+          get inVK(){ return inVK; }, get bridgeLoaded(){ return bridgeLoaded; }};
 })();
 
 /* ============================== SDK WRAPPER ==============================
@@ -984,7 +1084,11 @@ const SDK = (() => {
   const preloadAd = () => new Promise(res => {
     let done = false; const fin = v => { if(!done){ done=true; res(v); } };
     onReady(() => {
-      if (!gp || (!gp.ads && !gp.advertisement)){ fin(false); return; }   // нет SDK — фолбэк мгновенно
+      if (!gp || (!gp.ads && !gp.advertisement)){
+        if (VKB.bridgeLoaded){ VKB.checkAds('interstitial'); VKB.checkAds('reward'); fin(true); }
+        else fin(false);
+        return;
+      }   // нет SDK — фолбэк мгновенно
       const p = call('ads','showPreloader') ?? call('advertisement','preload');
       if (p && p.then) p.then(()=>fin(true)).catch(()=>fin(false));
       else if (gp && gp.ads && gp.ads.on) { gp.ads.on('preloader:close', ()=>fin(true)); gp.ads.on('preloader:start', ()=>{}); }
@@ -995,15 +1099,27 @@ const SDK = (() => {
   const adsPlaying = () => { try{ return !!(gp && gp.ads && (gp.ads.isFullscreenPlaying || gp.ads.isRewardedPlaying || gp.ads.isPreloaderPlaying)); }catch(e){ return false; } };
   const interstitial = () => {
     const now = performance.now();
-    if (now - sessionStart < 60000) return;          // запрет первые 60 сек сессии
+    const vkRoute = !has() && VKB.bridgeLoaded;
+    if (now - sessionStart < (vkRoute ? 120000 : 60000)) return;   // запрет первые 60/120 сек сессии
     if (now - lastInter < 180000) return;            // кулдаун 180 сек
-    lastInter = now;
-    onReady(() => { (call('ads','showFullscreen') ?? call('advertisement','fullscreen')); });
+    onReady(() => {
+      if (gp){ (call('ads','showFullscreen') ?? call('advertisement','fullscreen')); lastInter = now; }
+      else if (VKB.bridgeLoaded){ lastInter = now; VKB.showInterstitial(); }
+    });
   };
+  const prerollCheck = () => onReady(() => { if (!has()) VKB.checkAds && VKB.checkAds('reward'); });
   const rewarded = tag => new Promise(res => {
     let done = false; const fin = v => { if(!done){ done=true; res(v); } };
     onReady(() => {
       if (!gp || !gp.ads || !gp.ads.showRewardedVideo){
+        if (VKB.bridgeLoaded){
+          // проверенная схема VK: check → show reward → награда; нет материалов = бесплатная награда
+          VKB.showRewarded().then(r => {
+            if (r === 'free') UI.toast(L('adNoSdk'),'🎁');
+            fin(r !== 'fail');
+          });
+          return;
+        }
         // фолбэк без SDK: короткая имитация и награда выдаётся
         setTimeout(()=>{ UI.toast(L('adNoSdk'),'🎁'); fin(true); }, 700);
         return;
@@ -1045,7 +1161,7 @@ const SDK = (() => {
     });
   }
   function pushCloud(force){
-    if (!force && !gp) return;
+    if (!force && !gp && !(typeof VKB !== 'undefined' && VKB.bridgeLoaded)) return;
     clearTimeout(cloudTimer);
     cloudTimer = setTimeout(() => {
       onReady(() => { try{ if (gp && gp.player && gp.player.set){ gp.player.set('save', JSON.stringify(S)); gp.player.sync && gp.player.sync(); } }catch(e){} });
@@ -1062,7 +1178,7 @@ const SDK = (() => {
   }
 
   return {inject, onReady, has, lang, gameStart, gameStop, gameplayStart, gameplayStop,
-          preloadAd, interstitial, rewarded, soundToggle, pushCloud, adsPlaying,
+          preloadAd, interstitial, rewarded, prerollCheck, soundToggle, pushCloud, adsPlaying,
           get gp(){ return gp; }, get ready(){ return ready; }};
 })();
 
@@ -1897,6 +2013,7 @@ const GAME = (() => {
     burst(W/2, G.rocket.y, '#ff9420', 46); burst(W/2, G.rocket.y, '#ff5468', 30);
     G.shake = 30; Audio.sfx.hit(); Audio.thrust(false); Audio.music(false);
     SDK.gameplayStop();
+    SDK.prerollCheck();
   }
   function doContinue(){
     UI.closeModal('m-continue');
@@ -2928,9 +3045,9 @@ const META = (() => {
     const bb = $('resBtns'); bb.innerHTML = '';
     const mk = (cls, txt, cb, parent) => { const b = document.createElement('button'); b.className = cls; b.textContent = txt; b.onclick = cb; (parent||bb).appendChild(b); return b; };
     if (G.daily){
-      mk('pill big', '↻ ' + L('dailyCh'), () => { Audio.sfx.click(); UI.closeModal('m-result'); GAME.startDaily(); });
+      mk('pill big', '↻ ' + L('dailyCh'), () => { Audio.sfx.click(); UI.closeModal('m-result'); SDK.interstitial(); GAME.startDaily(); });
     } else if (win && !G.endless && G.lvl < MAX_LEVEL)
-      mk('pill big', L('next'), () => { Audio.sfx.click(); UI.closeModal('m-result'); GAME.start(G.lvl+1, {hardcore:G.hardcore}); });
+      mk('pill big', L('next'), () => { Audio.sfx.click(); UI.closeModal('m-result'); SDK.interstitial(); GAME.start(G.lvl+1, {hardcore:G.hardcore}); });
     if (win && G.endless)
       mk('pill big', L('next'), () => { Audio.sfx.click(); UI.closeModal('m-result'); /* continue run already going */ });
     const rw = document.createElement('div'); rw.className = 'row'; rw.style.width = '100%';
@@ -3125,6 +3242,7 @@ document.addEventListener('keydown', () => Audio.resume(), {once:true});
 /* ============================== TEST / DEMO HOOKS ============================== */
 window.__TR = {
   get S(){ return S; }, get G(){ return GAME.G; }, GAME, META, UI, SDK, Audio,
+  VKB, SDK,
   startLevel:(n, hc=false) => GAME.start(n, {hardcore:hc}),
   startEndless:() => GAME.startEndless(),
   auto:b => { GAME.G.auto = !!b; },
