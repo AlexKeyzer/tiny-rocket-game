@@ -977,25 +977,34 @@ const VKB = (() => {
       20000, false);
   }
   /* возвращает 'watched' | 'free' | 'fail'.
-     Защита от досрочного закрытия: награда только если result=true И время
-     между открытием и закрытием рекламы (VKWebAppViewHide → VKWebAppViewRestore)
-     не меньше MIN_WATCH. Досрочно закрыл — награды нет.                    */
-  const MIN_WATCH = 10000;
+     Политика: награда за result:true, ЕСЛИ не доказано досрочное закрытие.
+     Доказательство: пара VKWebAppViewHide → VKWebAppViewRestore с длительностью
+     от 1.2 c (отсев «bounce»-событий) до MIN_WATCH (10 c). Если событий нет или
+     они bounce — доверяем платформе и награждаем после показа.              */
+  const MIN_WATCH = 10000, BOUNCE = 1200;
   let rw = null;
+  function rewardViewHide(){ if (rw && !rw.done && !rw.openAt) rw.openAt = performance.now(); }
+  function rewardViewRestore(){
+    if (!rw || rw.done || !rw.openAt || rw.closeAt) return;
+    const dur = performance.now() - rw.openAt;
+    if (dur < BOUNCE){ rw.openAt = null; return; }          // bounce: игнорируем пару
+    rw.closeAt = performance.now();
+    if (rw.result !== null) rewardSettle('close');
+  }
   function rewardSettle(reason){
     if (!rw || rw.done) return;
-    const dur = (rw.closeAt || performance.now()) - (rw.openAt || rw.showAt);
     rw.done = true;
-    if (rw.result === true && dur >= MIN_WATCH){ adLog('reward granted ('+reason+', '+Math.round(dur)+'ms)'); rw.settle('watched'); }
-    else { adLog('reward denied ('+reason+', result='+rw.result+', dur='+Math.round(dur)+'ms)'); rw.settle('fail'); }
+    const dur = (rw.closeAt || performance.now()) - (rw.openAt || rw.showAt);
+    if (rw.result === true){
+      if (rw.closeAt && dur < MIN_WATCH){ adLog('reward DENIED: early close '+Math.round(dur)+'ms'); rw.settle('fail'); }
+      else { adLog('reward GRANTED ('+reason+', '+Math.round(dur)+'ms)'); rw.settle('watched'); }
+    } else { adLog('reward DENIED (result='+rw.result+', '+reason+')'); rw.settle('fail'); }
   }
-  function rewardViewHide(){ if (rw && !rw.done && !rw.openAt) rw.openAt = performance.now(); }
-  function rewardViewRestore(){ if (rw && !rw.done && rw.openAt && !rw.closeAt){ rw.closeAt = performance.now(); if (rw.result !== null) rewardSettle('close'); } }
   function showRewarded(){
     if (!bridgeLoaded) return Promise.resolve('free');
     if (standalone()) return Promise.resolve('free');   // вне VK рекламы нет — фолбэк-награда
     return checkAds('reward').then(ok => {
-      if (!ok){ adLog('reward materials not ready → deny (no ad, no reward)'); return 'fail'; }
+      if (!ok){ adLog('reward: no materials → deny'); return 'fail'; }
       return new Promise(res => {
         rw = {showAt: performance.now(), openAt: null, closeAt: null, result: null, done: false,
               settle: v => { preloadChecks(); res(v); }};
@@ -1005,12 +1014,8 @@ const VKB = (() => {
         send('VKWebAppShowNativeAds', {ad_format:'reward'}).then(d => {
           if (!rw || rw.done) return;
           rw.result = !!(d && d.result);
-          if (!rw.result){ rw.done = true; rw.settle('fail'); return; }
           if (rw.closeAt) rewardSettle('promise-after-close');
-          else if (!rw.openAt){
-            rw.openAt = rw.openAt || rw.showAt;
-            setTimeout(()=>rewardSettle('promise-elapsed'), Math.max(0, MIN_WATCH - (performance.now()-rw.showAt)) + 50);
-          }
+          else setTimeout(()=>rewardSettle('promise'), 600);   // нет сигналов закрытия — доверяем показу
         }).catch(e => {
           adLog('reward error: ' + (e && e.error_type || e));
           if (rw && !rw.done){ rw.done = true; rw.settle('fail'); }
@@ -1053,11 +1058,23 @@ const VKB = (() => {
   function banner(on){
     if (!bridgeLoaded || standalone()) return;
     if (on === bannerOn) return;
-    if (on && !bannerOk) return;
-    bannerOn = on;
-    send(on ? 'VKWebAppShowBannerAd' : 'VKWebAppHideBannerAd', {})
-      .then(()=>adLog('banner ' + (on?'shown':'hidden')))
-      .catch(e => { adLog('banner error: ' + (e && e.error_type || e)); bannerOn = !on; });
+    const apply = () => {
+      bannerOn = on;
+      const params = on ? {banner_location:'bottom', banner_align:'left'} : {};
+      send(on ? 'VKWebAppShowBannerAd' : 'VKWebAppHideBannerAd', params)
+        .then(d => adLog('banner ' + (on ? 'shown:' : 'hidden:') + !!(d && d.result)))
+        .catch(e => {
+          adLog('banner error: ' + (e && e.error_type || e));
+          bannerOn = !on;
+          if (on){ setTimeout(()=>{ if (!bannerOn && bannerOk) banner(true); }, 5000); }  // один ретрай
+        });
+    };
+    if (on && !bannerOk){   // перепроверяем доступность и показываем
+      send('VKWebAppCheckBannerAd').then(d => { bannerOk = !!(d && d.result); if (bannerOk) apply(); })
+        .catch(()=>{ bannerOk = false; });
+      return;
+    }
+    apply();
   }
   const taptic = t => { if (bridgeLoaded) send('VKWebAppTapticImpactOccurred', {type:t}).catch(()=>{}); };
   return {inject, onReady, lang, save, load, taptic, showInterstitial, showRewarded, checkAds, banner,
