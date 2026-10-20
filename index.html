@@ -905,8 +905,8 @@ const VKB = (() => {
       if (window.vkBridge && window.vkBridge.subscribe) {
         window.vkBridge.subscribe(ev => {
           const t = ev && ev.detail && ev.detail.type;
-          if (t === 'VKWebAppViewHide'){ GAME.autoPaused = true; GAME.pause(true); adLog('ViewHide → pause'); }
-          if (t === 'VKWebAppViewRestore' && GAME.autoPaused){ GAME.autoPaused = false; GAME.resume(); adLog('ViewRestore → resume'); }
+          if (t === 'VKWebAppViewHide'){ GAME.autoPaused = true; GAME.pause(true); rewardViewHide(); adLog('ViewHide → pause'); }
+          if (t === 'VKWebAppViewRestore'){ rewardViewRestore(); if (GAME.autoPaused){ GAME.autoPaused = false; GAME.resume(); adLog('ViewRestore → resume'); } }
         });
       }
     } catch(e){}
@@ -919,6 +919,7 @@ const VKB = (() => {
   function preloadChecks(){
     send('VKWebAppCheckNativeAds', {ad_format:'interstitial'}).catch(()=>{});
     send('VKWebAppCheckNativeAds', {ad_format:'reward'}).catch(()=>{});
+    bannerInit();
     adLog('native ads pre-check sent');
   }
   let done = false;
@@ -975,24 +976,44 @@ const VKB = (() => {
         .catch(e => { adLog('interstitial error: ' + (e && e.error_type || e)); preloadChecks(); return false; }),
       20000, false);
   }
-  /* возвращает 'watched' | 'free' | 'fail' */
+  /* возвращает 'watched' | 'free' | 'fail'.
+     Защита от досрочного закрытия: награда только если result=true И время
+     между открытием и закрытием рекламы (VKWebAppViewHide → VKWebAppViewRestore)
+     не меньше MIN_WATCH. Досрочно закрыл — награды нет.                    */
+  const MIN_WATCH = 10000;
+  let rw = null;
+  function rewardSettle(reason){
+    if (!rw || rw.done) return;
+    const dur = (rw.closeAt || performance.now()) - (rw.openAt || rw.showAt);
+    rw.done = true;
+    if (rw.result === true && dur >= MIN_WATCH){ adLog('reward granted ('+reason+', '+Math.round(dur)+'ms)'); rw.settle('watched'); }
+    else { adLog('reward denied ('+reason+', result='+rw.result+', dur='+Math.round(dur)+'ms)'); rw.settle('fail'); }
+  }
+  function rewardViewHide(){ if (rw && !rw.done && !rw.openAt) rw.openAt = performance.now(); }
+  function rewardViewRestore(){ if (rw && !rw.done && rw.openAt && !rw.closeAt){ rw.closeAt = performance.now(); if (rw.result !== null) rewardSettle('close'); } }
   function showRewarded(){
-    if (!bridgeLoaded || standalone()) return Promise.resolve('free');
+    if (!bridgeLoaded) return Promise.resolve('free');
+    if (standalone()) return Promise.resolve('free');   // вне VK рекламы нет — фолбэк-награда
     return checkAds('reward').then(ok => {
-      if (!ok){ adLog('reward materials not ready → grant free'); return 'free'; }
-      let settled = false;
+      if (!ok){ adLog('reward materials not ready → deny (no ad, no reward)'); return 'fail'; }
       return new Promise(res => {
-        const hang = setTimeout(()=>{ if(!settled){settled=true; adLog('reward hang-timeout'); res('fail');} }, 45000);
+        rw = {showAt: performance.now(), openAt: null, closeAt: null, result: null, done: false,
+              settle: v => { preloadChecks(); res(v); }};
+        const hang = setTimeout(()=>{ if (rw && !rw.done){ rw.done = true; adLog('reward hang-timeout'); rw.settle('fail'); } }, 45000);
+        const done0 = rw.settle;
+        rw.settle = v => { clearTimeout(hang); done0(v); };
         send('VKWebAppShowNativeAds', {ad_format:'reward'}).then(d => {
-          clearTimeout(hang);
-          if (settled) return; settled = true;
-          preloadChecks();
-          res(d && d.result ? 'watched' : 'fail');
+          if (!rw || rw.done) return;
+          rw.result = !!(d && d.result);
+          if (!rw.result){ rw.done = true; rw.settle('fail'); return; }
+          if (rw.closeAt) rewardSettle('promise-after-close');
+          else if (!rw.openAt){
+            rw.openAt = rw.openAt || rw.showAt;
+            setTimeout(()=>rewardSettle('promise-elapsed'), Math.max(0, MIN_WATCH - (performance.now()-rw.showAt)) + 50);
+          }
         }).catch(e => {
-          clearTimeout(hang);
-          if (settled) return; settled = true;
           adLog('reward error: ' + (e && e.error_type || e));
-          preloadChecks(); res('fail');
+          if (rw && !rw.done){ rw.done = true; rw.settle('fail'); }
         });
       });
     });
@@ -1024,8 +1045,22 @@ const VKB = (() => {
       });
     }).catch(()=>null);
   }
+  let bannerOn = false, bannerOk = false;
+  function bannerInit(){
+    if (!bridgeLoaded) return;
+    send('VKWebAppCheckBannerAd').then(d => { bannerOk = !!(d && d.result); adLog('banner available: ' + bannerOk); }).catch(()=>{ bannerOk = false; });
+  }
+  function banner(on){
+    if (!bridgeLoaded || standalone()) return;
+    if (on === bannerOn) return;
+    if (on && !bannerOk) return;
+    bannerOn = on;
+    send(on ? 'VKWebAppShowBannerAd' : 'VKWebAppHideBannerAd', {})
+      .then(()=>adLog('banner ' + (on?'shown':'hidden')))
+      .catch(e => { adLog('banner error: ' + (e && e.error_type || e)); bannerOn = !on; });
+  }
   const taptic = t => { if (bridgeLoaded) send('VKWebAppTapticImpactOccurred', {type:t}).catch(()=>{}); };
-  return {inject, onReady, lang, save, load, taptic, showInterstitial, showRewarded, checkAds,
+  return {inject, onReady, lang, save, load, taptic, showInterstitial, showRewarded, checkAds, banner,
           get inVK(){ return inVK; }, get bridgeLoaded(){ return bridgeLoaded; }};
 })();
 
@@ -1108,6 +1143,10 @@ const SDK = (() => {
     });
   };
   const prerollCheck = () => onReady(() => { if (!has()) VKB.checkAds && VKB.checkAds('reward'); });
+  const banner = on => { onReady(() => {
+    if (gp){ on ? (call('ads','showSticky') ?? call('advertisement','sticky')) : (call('ads','closeSticky') ?? call('advertisement','closeSticky')); }
+    else VKB.banner(on);
+  }); };
   const rewarded = tag => new Promise(res => {
     let done = false; const fin = v => { if(!done){ done=true; res(v); } };
     onReady(() => {
@@ -1178,7 +1217,7 @@ const SDK = (() => {
   }
 
   return {inject, onReady, has, lang, gameStart, gameStop, gameplayStart, gameplayStop,
-          preloadAd, interstitial, rewarded, prerollCheck, soundToggle, pushCloud, adsPlaying,
+          preloadAd, interstitial, rewarded, prerollCheck, banner, soundToggle, pushCloud, adsPlaying,
           get gp(){ return gp; }, get ready(){ return ready; }};
 })();
 
@@ -1556,7 +1595,7 @@ const UI = (() => {
     const b1 = document.createElement('button'); b1.className='pill small'; b1.textContent = '200 ✦';
     b1.onclick = () => { if (spendDust(PRICES.chest)){ Audio.sfx.click(); openChest('shop'); } else { Audio.sfx.deny(); toast(L('noDust'),'✦'); } };
     const b2 = document.createElement('button'); b2.className='pill small grn'; b2.textContent = '📺 ' + L('watchAdFree');
-    b2.onclick = () => { rewardedFlow(() => openChest('shop')); };
+    b2.onclick = () => { rewardedFlow(ok => { if (ok) openChest('shop'); else UI.toast(L('adFail'),'📺'); }); };
     ch.append(b1, b2); body.appendChild(ch);
     // skins
     SKINS.forEach((sk, i) => {
@@ -1954,7 +1993,7 @@ const GAME = (() => {
     if (!G.endless && G.lvl > 1 && (G.lvl-1) % 24 === 0)
       setTimeout(()=>UI.banner('🌌 ' + L('eraNames')[G.era] + ': ' + L('mechNames')[G.era] + '!', 2400), 900);
     UI.show('game');
-    SDK.gameplayStart();
+    SDK.gameplayStart(); SDK.banner(true);
     Audio.resume(); Audio.music(S.set.music, G.era, G.cfg.speed);
     if (G.hardcore) UI.toast(L('hardcoreHint'), '💀');
     if (G.mod) setTimeout(()=>UI.banner(G.mod.icon + ' ' + L('mod') + ': ' + L('mod'+G.mod.id[0].toUpperCase()+G.mod.id.slice(1)), 2200), 700);
@@ -1964,17 +2003,17 @@ const GAME = (() => {
     if (e) startEndless(); else start(n, {hardcore:hc}); }
   function pause(silent){
     if (G.mode !== 'play') return;
-    G.mode = 'pause'; SDK.gameplayStop(); Audio.thrust(false); Audio.music(false);
+    G.mode = 'pause'; SDK.gameplayStop(); SDK.banner(false); Audio.thrust(false); Audio.music(false);
     saveLocal();
     if (!silent) UI.modal('m-pause');
   }
   function resume(){
     if (G.mode !== 'pause') return;
-    G.mode = 'play'; SDK.gameplayStart(); Audio.resume(); Audio.music(S.set.music, G.era, G.cfg.speed);
+    G.mode = 'play'; SDK.gameplayStart(); SDK.banner(true); Audio.resume(); Audio.music(S.set.music, G.era, G.cfg.speed);
   }
   function exitToMap(inter=true){
     G.mode = 'idle'; G.era = eraOf(Math.min(MAX_LEVEL, S.unlocked));
-    SDK.gameplayStop(); Audio.thrust(false); Audio.music(false);
+    SDK.gameplayStop(); SDK.banner(false); Audio.thrust(false); Audio.music(false);
     UI.closeModal('m-pause'); UI.closeModal('m-result'); UI.closeModal('m-continue');
     UI.show((G.endless || G.daily) ? 'scr-start' : 'scr-map');
     if (inter) SDK.interstitial();
@@ -2992,6 +3031,7 @@ const META = (() => {
 
   /* ---------- result modal ---------- */
   function showResult(win, R){
+    SDK.banner(false);
     UI.modal('m-result');
     const G = GAME.G;
     $('resTitle').textContent = G.daily ? L('dailyCh') : (win ? L('cargoDelivered') : L('runOver'));
