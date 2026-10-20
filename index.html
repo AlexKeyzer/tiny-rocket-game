@@ -8,6 +8,15 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon_1024.png">
 <script>if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1')){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}</script>
+<!-- vk-bridge-inline-2.10.0 · VK Bridge 2.10.0 (MIT) — локальная копия, как в релизной
+     интеграции: мост не зависит от CDN. Вне VK просто не используется;
+     зеркала в game.js оставлены резервным путём. -->
+<script>/* vk-bridge-inline-2.10.0 */
+if(!window.vkBridge&&!window.vkConnect){
+!function(){"use strict";var e=function(){return e=Object.assign||function(e){for(var t,n=1,o=arguments.length;n<o;n++)for(var p in t=arguments[n])Object.prototype.hasOwnProperty.call(t,p)&&(e[p]=t[p]);return e},e.apply(this,arguments)};function t(e,t,n){if(n||2===arguments.length)for(var o,p=0,r=t.length;p<r;p++)!o&&p in t||(o||(o=Array.prototype.slice.call(t,0,p)),o[p]=t[p]);return e.concat(o||Array.prototype.slice.call(t))}function n(t,n){var o,p,r=(o={current:0,next:function(){return++this.current}},p={},{add:function(e,t){var n=null!=t?t:o.next();return p[n]=e,n},resolve:function(e,t,n){var o=p[e];o&&(n(t)?o.resolve(t):o.reject(t),p[e]=null)}});return n((function(e){if(e.detail&&e.detail.data&&"object"==typeof e.detail.data&&"request_id"in e.detail.data){var t=e.detail.data,n=t.request_id,o=function(e,t){var n={};for(var o in e)Object.prototype.hasOwnProperty.call(e,o)&&t.indexOf(o)<0&&(n[o]=e[o]);if(null!=e&&"function"==typeof Object.getOwnPropertySymbols){var p=0;for(o=Object.getOwnPropertySymbols(e);p<o.length;p++)t.indexOf(o[p])<0&&Object.prototype.propertyIsEnumerable.call(e,o[p])&&(n[o[p]]=e[o[p]])}return n}(t,["request_id"]);n&&r.resolve(n,o,(function(e){return!("error_type"in e)}))}})),function(n,o){return void 0===o&&(o={}),new Promise((function(p,i){var a=r.add({resolve:p,reject:i},o.request_id);t(n,e(e({},o),{request_id:a}))}))}}var o="undefined"!=typeof window,p=Boolean(o&&window.AndroidBridge),r=Boolean(o&&window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.VKWebAppClose),i=Boolean(o&&window.ReactNativeWebView&&"function"==typeof window.ReactNativeWebView.postMessage),a=o&&!p&&!r,s=a&&/(^\?|&)vk_platform=mobile_web(&|$)/.test(location.search),d=a?"message":"VKWebAppEvent",b=t(["VKWebAppInit","VKWebAppGetCommunityAuthToken","VKWebAppAddToCommunity","VKWebAppAddToHomeScreenInfo","VKWebAppClose","VKWebAppCopyText","VKWebAppCreateHash","VKWebAppGetUserInfo","VKWebAppSetLocation","VKWebAppSendToClient","VKWebAppGetClientVersion","VKWebAppGetPhoneNumber","VKWebAppGetEmail","VKWebAppGetGroupInfo","VKWebAppGetGeodata","VKWebAppGetCommunityToken","VKWebAppGetConfig","VKWebAppGetLaunchParams","VKWebAppSetTitle","VKWebAppGetAuthToken","VKWebAppCallAPIMethod","VKWebAppJoinGroup","VKWebAppLeaveGroup","VKWebAppAllowMessagesFromGroup","VKWebAppDenyNotifications","VKWebAppAllowNotifications","VKWebAppOpenPayForm","VKWebAppOpenApp","VKWebAppShare","VKWebAppShowWallPostBox","VKWebAppScroll","VKWebAppShowOrderBox","VKWebAppShowLeaderBoardBox","VKWebAppShowInviteBox","VKWebAppShowRequestBox","VKWebAppAddToFavorites","VKWebAppShowStoryBox","VKWebAppStorageGet","VKWebAppStorageGetKeys","VKWebAppStorageSet","VKWebAppFlashGetInfo","VKWebAppSubscribeStoryApp","VKWebAppOpenWallPost","VKWebAppCheckAllowedScopes","VKWebAppCheckBannerAd","VKWebAppHideBannerAd","VKWebAppShowBannerAd","VKWebAppCheckNativeAds","VKWebAppShowNativeAds","VKWebAppRetargetingPixel","VKWebAppConversionHit","VKWebAppShowSubscriptionBox","VKWebAppCheckSurvey","VKWebAppShowSurvey","VKWebAppScrollTop","VKWebAppScrollTopStart","VKWebAppScrollTopStop","VKWebAppShowSlidesSheet","VKWebAppTranslate"],a&&!s?["VKWebAppResizeWindow","VKWebAppAddToMenu","VKWebAppShowInstallPushBox","VKWebAppGetFriends","VKWebAppShowCommunityWidgetPreviewBox","VKWebAppCallStart","VKWebAppCallJoin","VKWebAppCallGetStatus"]:["VKWebAppShowImages"],!0),A=o?window.AndroidBridge:void 0,l=r?window.webkit.messageHandlers:void 0,u=a?parent:void 0;var c,W,V,K,f,w,S;!function(e){e.REWARD="reward",e.INTERSTITIAL="interstitial"}(c||(c={})),function(e){e.RESIZE="resize",e.OVERLAY="overlay"}(W||(W={})),function(e){e.TOP="top",e.BOTTOM="bottom"}(V||(V={})),function(e){e.CAMERA="camera",e.LOCATION="location",e.PHOTO="photo"}(K||(K={})),function(e){e.RU="ru",e.UK="uk",e.UA="ua",e.EN="en",e.BE="be",e.KZ="kz",e.PT="pt",e.ES="es"}(f||(f={})),function(e){e.ADMIN="admin",e.EDITOR="editor",e.MEMBER="member",e.MODER="moder",e.NONE="none"}(w||(w={})),function(e){e.DESKTOP_WEB="desktop_web",e.DESKTOP_WEB_MESSENGER="desktop_web_messenger",e.DESKTOP_APP_MESSENGER="desktop_app_messenger",e.MOBILE_WEB="mobile_web",e.MOBILE_ANDROID="mobile_android",e.MOBILE_ANDROID_MESSENGER="mobile_android_messenger",e.MOBILE_IPHONE="mobile_iphone",e.MOBILE_IPHONE_MESSENGER="mobile_iphone_messenger",e.MOBILE_IPAD="mobile_ipad"}(S||(S={}));var v=function(e){var o=void 0,s=[];function c(e){s.push(e)}function W(){return r||p}function V(){return a&&window.parent!==window}function K(){return W()||V()}function f(e){if(r||p)return t([],s,!0).map((function(t){return t.call(null,e)}));var n=null==e?void 0:e.data;if(a&&n){if(i&&"string"==typeof n)try{n=JSON.parse(n)}catch(e){}var d=n.type,b=n.data,A=n.frameId;d&&("VKWebAppSettings"!==d?t([],s,!0).map((function(e){return e({detail:{type:d,data:b}})})):o=A)}}i&&/(android)/i.test(navigator.userAgent)?document.addEventListener(d,f):"undefined"!=typeof window&&"addEventListener"in window&&window.addEventListener(d,f);var w=n((function(t,n){A&&A[t]?A[t](JSON.stringify(n)):l&&l[t]&&"function"==typeof l[t].postMessage?l[t].postMessage(n):i?window.ReactNativeWebView.postMessage(JSON.stringify({handler:t,params:n})):u&&"function"==typeof u.postMessage&&u.postMessage({handler:t,params:n,type:"vk-connect",webFrameId:o,connectVersion:e},"*")}),c);return{send:w,sendPromise:w,subscribe:c,unsubscribe:function(e){var t=s.indexOf(e);t>-1&&s.splice(t,1)},supports:function(e){return p?!(!A||"function"!=typeof A[e]):r?!(!l||!l[e]||"function"!=typeof l[e].postMessage):!!a&&b.includes(e)},isWebView:W,isIframe:V,isEmbedded:K,isStandalone:function(){return!K()}}}("2.10.0");window.vkBridge=window.vkConnect=v}();
+}
+</script>
+
 <title>Кроха-Ракета / Tiny Rocket</title>
 <style>
 :root{
@@ -540,7 +549,7 @@ const IMG_DATA = {
 
 'use strict';
 /* ==================== TINY ROCKET / КРОХА-РАКЕТА ==================== */
-const VERSION = '1.2.0';
+const VERSION = '1.7.0';
 /* ---------- GamePush project credentials: fill from GamePush panel ---------- */
 const GP_PROJECT_ID = 0;              // <- ID проекта из панели GamePush
 const GP_PUBLIC_TOKEN = '';           // <- публичный ключ из панели GamePush
@@ -873,10 +882,16 @@ function dailyTick(){
 }
 
 /* ============================== VK BRIDGE ADAPTER ==============================
-   Схема рекламы взята из проверенного релизного интеграционного слоя VK:
-   мост грузится ВСЕГДА (2 зеркала), реклама через VKWebAppShowNativeAds
-   (interstitial / reward), проверка готовности VKWebAppCheckNativeAds,
-   пауза по VKWebAppViewHide, язык из vk_language, сохранения чанками.   */
+   Схема рекламы — ровно как в релизной игре, где она подтверждённо работает:
+   · vk-bridge 2.10.0 встроен ЛОКАЛЬНО в <head> (не зависит от CDN), зеркала —
+     резервный путь; вне VK (нет vk_app_id/vk_user_id/vk_language в search+hash
+     и мы не в ифрейме) — мгновенный web-режим без единого VK-вызова;
+   · полноэкранная: VKWebAppShowNativeAds (interstitial / reward), проверка
+     готовности VKWebAppCheckNativeAds, пауза по VKWebAppViewHide;
+   · баннер: VKWebAppShowBannerAd {banner_location:'bottom'} — один вызов,
+     БЕЗ CheckBannerAd / banner_align / ретраев / скрытия; повторяется после
+     каждой полноэкранной рекламы и при возврате в игру;
+   · язык из vk_language, сохранения чанками.                                   */
 const adLog = m => { try { console.log('[AD]', m); } catch(e){} };
 const VKB = (() => {
   let send = () => Promise.reject(new Error('no vkbridge'));
@@ -885,6 +900,9 @@ const VKB = (() => {
   const onReady = fn => ready ? fn() : waiters.push(fn);
   const insideGuess = () => {
     try {
+      /* как в релизе: launch-параметры VK ищем в search И в hash
+         (в мобильном приложении VK они приходят в hash) */
+      if (/vk_app_id|vk_user_id|vk_language/.test(location.search + ' ' + location.hash)) return true;
       const q = new URLSearchParams(location.search);
       if (q.has('vk_app_id') || q.has('vk_user_id') || q.has('vk_language')) return true;
       const ref = document.referrer || '';
@@ -906,12 +924,15 @@ const VKB = (() => {
         window.vkBridge.subscribe(ev => {
           const t = ev && ev.detail && ev.detail.type;
           if (t === 'VKWebAppViewHide'){ GAME.autoPaused = true; GAME.pause(true); rewardViewHide(); adLog('ViewHide → pause'); }
-          if (t === 'VKWebAppViewRestore'){ rewardViewRestore(); if (GAME.autoPaused){ GAME.autoPaused = false; GAME.resume(); adLog('ViewRestore → resume'); } }
+          if (t === 'VKWebAppViewRestore'){ rewardViewRestore(); showVkBanner(); if (GAME.autoPaused){ GAME.autoPaused = false; GAME.resume(); adLog('ViewRestore → resume'); } }
         });
       }
     } catch(e){}
     if (inVK){
       try { send('VKWebAppSetViewSettings', {status_bar_style:'dark', action_bar_color:'#160a30'}).catch(()=>{}); } catch(e){}
+      /* как в релизе: при каждом возврате в игру баннер показывается снова —
+         VK может снимать его после полноэкранной рекламы/сворачивания */
+      try { document.addEventListener('visibilitychange', () => { if (!document.hidden) showVkBanner(); }); } catch(e){}
     }
     preloadChecks();
     finish();
@@ -919,8 +940,7 @@ const VKB = (() => {
   function preloadChecks(){
     send('VKWebAppCheckNativeAds', {ad_format:'interstitial'}).catch(()=>{});
     send('VKWebAppCheckNativeAds', {ad_format:'reward'}).catch(()=>{});
-    bannerInit();
-    if (bannerDesired && !bannerOn) bannerApply();
+    showVkBanner();   /* баннер: при старте и после каждой полноэкранной рекламы (как в релизе) */
     adLog('native ads pre-check sent');
   }
   let done = false;
@@ -943,12 +963,14 @@ const VKB = (() => {
     const boot = () => {
       adopt();   // мост мог быть внедрён платформой даже без наших скриптов
       if (!bridgeLoaded){ adLog('bridge not loaded → web mode'); inVK = false; finish(); return; }
-      inVK = true;   // мост есть — считаем себя в VK-среде (на десктопе вне VK вызовы просто упадут в catch)
+      if (!insideGuess()){ adLog('not VK env → web mode'); inVK = false; finish(); return; }
+      inVK = true;   // среда похожа на VK — инициализируемся (в web-версии часть вызовов упадёт в catch)
       send('VKWebAppInit').then(() => { adLog('VKWebAppInit OK'); return send('VKWebAppGetUserInfo').catch(()=>null); })
         .then(u => { afterInit(); return u; })
         .catch(() => { inVK = insideGuess(); afterInit(); });
       setTimeout(() => { if (!done){ inVK = inVK || insideGuess(); afterInit(); } }, 5000);
     };
+    if (adopt()){ boot(); return; }   // vk-bridge встроен в <head> локально — доступен сразу
     tryNext();
   }
   const lang = () => new Promise(res => {
@@ -966,11 +988,11 @@ const VKB = (() => {
   const withTimeout = (pr, ms, fallback) => Promise.race([
     pr, new Promise(res => setTimeout(() => res(fallback), ms))
   ]);
-  const checkAds = fmt => standalone() ? Promise.resolve(false) : withTimeout(
+  const checkAds = fmt => (!inVK || standalone()) ? Promise.resolve(false) : withTimeout(
       send('VKWebAppCheckNativeAds', {ad_format:fmt})
         .then(d => !!(d && d.result)).catch(()=>false), 2500, false);
   function showInterstitial(){
-    if (!bridgeLoaded || standalone()) return Promise.resolve(false);
+    if (!inVK || standalone()) return Promise.resolve(false);
     return withTimeout(
       send('VKWebAppShowNativeAds', {ad_format:'interstitial'})
         .then(d => { adLog('interstitial shown'); preloadChecks(); return !!(d && d.result); })
@@ -1002,7 +1024,7 @@ const VKB = (() => {
     } else { adLog('reward DENIED (result='+rw.result+', '+reason+')'); rw.settle('fail'); }
   }
   function showRewarded(){
-    if (!bridgeLoaded) return Promise.resolve('free');
+    if (!inVK) return Promise.resolve('free');
     if (standalone()) return Promise.resolve('free');   // вне VK рекламы нет — фолбэк-награда
     return checkAds('reward').then(ok => {
       if (!ok){ adLog('reward: no materials → deny'); return 'fail'; }
@@ -1027,7 +1049,7 @@ const VKB = (() => {
   /* --- сохранения чанками --- */
   const CHUNK = 3500;
   function save(str){
-    if (!bridgeLoaded) return Promise.resolve(false);
+    if (!inVK) return Promise.resolve(false);
     const parts = [];
     for (let i=0; i<str.length; i+=CHUNK) parts.push(str.slice(i, i+CHUNK));
     return send('VKWebAppStorageGetKeys', {count: 1000}).then(keys => {
@@ -1040,7 +1062,7 @@ const VKB = (() => {
     }).catch(()=>false);
   }
   function load(){
-    if (!bridgeLoaded) return Promise.resolve(null);
+    if (!inVK) return Promise.resolve(null);
     return send('VKWebAppStorageGetKeys', {count: 1000}).then(keys => {
       const idx = (keys.keys||[]).filter(k => /^trsave\d+$/.test(k)).map(k=>+k.slice(6)).sort((a,b)=>a-b);
       if (!idx.length) return null;
@@ -1051,40 +1073,21 @@ const VKB = (() => {
       });
     }).catch(()=>null);
   }
-  let bannerOn = false, bannerOk = false, bannerDesired = false, bannerTries = 0, bannerTimer = 0;
-  function bannerInit(){
-    if (!bridgeLoaded) return;
-    send('VKWebAppCheckBannerAd').then(d => { bannerOk = !!(d && d.result); adLog('banner available: ' + bannerOk); }).catch(()=>{ bannerOk = false; });
+  /* --- Баннер VK: ТОЧНО как в релизной игре, где баннер работает ---
+     VKWebAppShowBannerAd {banner_location:'bottom'} — единственный вызов:
+     без предварительного VKWebAppCheckBannerAd, без banner_align, без ретраев.
+     Отказ молча игнорируется (на web-версии VK баннеры не поддерживаются —
+     это нормально). Точки вызова: после VKWebAppInit, после каждой
+     полноэкранной рекламы (через preloadChecks), по VKWebAppViewRestore и
+     visibilitychange. Баннер никогда не скрывается (HideBannerAd не зовём). */
+  function showVkBanner(){
+    if (!inVK) return;
+    adLog('banner → VKWebAppShowBannerAd {banner_location:bottom}');
+    try { send('VKWebAppShowBannerAd', {banner_location:'bottom'}).catch(()=>{}); } catch(e){}
   }
-  function bannerApply(){
-    if (!bridgeLoaded || standalone()) return;
-    if (!bannerDesired){
-      if (bannerOn){ bannerOn = false; send('VKWebAppHideBannerAd', {}).catch(()=>{}); adLog('banner hidden'); }
-      return;
-    }
-    if (bannerOn) return;
-    bannerTries++;
-    send('VKWebAppShowBannerAd', {banner_location:'bottom', banner_align:'left'})
-      .then(d => {
-        const ok = !!(d && d.result);
-        adLog('banner show try#' + bannerTries + ' → ' + ok);
-        if (ok){ bannerOn = true; bannerTries = 0; }
-        else scheduleBannerRetry();
-      })
-      .catch(e => { adLog('banner error: ' + (e && e.error_type || e)); scheduleBannerRetry(); });
-  }
-  function scheduleBannerRetry(){
-    clearTimeout(bannerTimer);
-    if (!bannerDesired || bannerTries >= 6) return;
-    bannerTimer = setTimeout(() => { bannerInit(); bannerApply(); }, 5000);
-  }
-  function banner(on){
-    bannerDesired = on;
-    if (!on){ clearTimeout(bannerTimer); bannerTries = 0; }
-    onReady(bannerApply);   // применится после готовности бриджа (или сразу)
-  }
-  const taptic = t => { if (bridgeLoaded) send('VKWebAppTapticImpactOccurred', {type:t}).catch(()=>{}); };
-  return {inject, onReady, lang, save, load, taptic, showInterstitial, showRewarded, checkAds, banner,
+  const banner = on => { if (on) onReady(showVkBanner); };   // «выкл» = просто не повторять показ
+  const taptic = t => { if (inVK) send('VKWebAppTapticImpactOccurred', {type:t}).catch(()=>{}); };
+  return {inject, onReady, lang, save, load, taptic, showInterstitial, showRewarded, checkAds, banner, showVkBanner,
           get inVK(){ return inVK; }, get bridgeLoaded(){ return bridgeLoaded; }};
 })();
 
@@ -1144,7 +1147,7 @@ const SDK = (() => {
     let done = false; const fin = v => { if(!done){ done=true; res(v); } };
     onReady(() => {
       if (!gp || (!gp.ads && !gp.advertisement)){
-        if (VKB.bridgeLoaded){ VKB.checkAds('interstitial'); VKB.checkAds('reward'); fin(true); }
+        if (VKB.inVK){ VKB.checkAds('interstitial'); VKB.checkAds('reward'); fin(true); }
         else fin(false);
         return;
       }   // нет SDK — фолбэк мгновенно
@@ -1158,12 +1161,12 @@ const SDK = (() => {
   const adsPlaying = () => { try{ return !!(gp && gp.ads && (gp.ads.isFullscreenPlaying || gp.ads.isRewardedPlaying || gp.ads.isPreloaderPlaying)); }catch(e){ return false; } };
   const interstitial = () => {
     const now = performance.now();
-    const vkRoute = !has() && VKB.bridgeLoaded;
+    const vkRoute = !has() && VKB.inVK;
     if (now - sessionStart < (vkRoute ? 120000 : 60000)) return;   // запрет первые 60/120 сек сессии
     if (now - lastInter < 180000) return;            // кулдаун 180 сек
     onReady(() => {
       if (gp){ (call('ads','showFullscreen') ?? call('advertisement','fullscreen')); lastInter = now; }
-      else if (VKB.bridgeLoaded){ lastInter = now; VKB.showInterstitial(); }
+      else if (VKB.inVK){ lastInter = now; VKB.showInterstitial(); }
     });
   };
   const prerollCheck = () => onReady(() => { if (!has()) VKB.checkAds && VKB.checkAds('reward'); });
@@ -1175,7 +1178,7 @@ const SDK = (() => {
     let done = false; const fin = v => { if(!done){ done=true; res(v); } };
     onReady(() => {
       if (!gp || !gp.ads || !gp.ads.showRewardedVideo){
-        if (VKB.bridgeLoaded){
+        if (VKB.inVK){
           // проверенная схема VK: check → show reward → награда; нет материалов = бесплатная награда
           VKB.showRewarded().then(r => {
             if (r === 'free') UI.toast(L('adNoSdk'),'🎁');
@@ -1224,7 +1227,7 @@ const SDK = (() => {
     });
   }
   function pushCloud(force){
-    if (!force && !gp && !(typeof VKB !== 'undefined' && VKB.bridgeLoaded)) return;
+    if (!force && !gp && !(typeof VKB !== 'undefined' && VKB.inVK)) return;
     clearTimeout(cloudTimer);
     cloudTimer = setTimeout(() => {
       onReady(() => { try{ if (gp && gp.player && gp.player.set){ gp.player.set('save', JSON.stringify(S)); gp.player.sync && gp.player.sync(); } }catch(e){} });
