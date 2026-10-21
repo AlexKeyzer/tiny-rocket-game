@@ -116,13 +116,9 @@ body{
 .modal>.panel{pointer-events:auto;width:min(92%,420px);max-height:94%;padding:22px 18px 18px;display:flex;flex-direction:column;gap:12px;
   animation:springIn .5s cubic-bezier(.22,1.5,.36,1)}
 .modal.closing>.panel{animation:springOut .18s ease-in forwards}
-/* ---------- соответствие правилам VK: согласие, документы, зона баннера ---------- */
-#m-consent{pointer-events:auto;background:rgba(10,4,26,.66);z-index:60}
+/* ---------- соответствие правилам VK: документы, зона баннера ---------- */
 #m-legal{z-index:62}
 .legalTxt{font-size:13px;font-weight:600;line-height:1.55;white-space:pre-wrap;text-align:left}
-.linkish{background:none;border:0;color:#ffe3e8;text-decoration:underline;font:inherit;font-size:12.5px;font-weight:700;opacity:.9;cursor:pointer;padding:8px 10px;min-height:36px}
-.ageChip{display:inline-block;border:2px solid #fff;border-radius:9px;padding:0 8px;font-weight:900;font-size:14px;margin-right:6px;vertical-align:middle}
-#scr-denied{position:absolute;inset:0;z-index:70;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:28px;text-align:center;background:linear-gradient(180deg,#1b0b38,#160a30)}
 /* нижний баннер в мобильном приложении VK рисуется поверх WebView — резервируем
    снизу 112px (баннер ≈90px + зазор ≥20px), чтобы баннер не перекрывал игровую
    область и кнопки (правила 5.1.4.2 в/г/д) */
@@ -318,7 +314,6 @@ body.vkb #frame{padding-bottom:calc(env(safe-area-inset-bottom) + 112px)}
         </div>
       </div>
       <div class="spacer"></div>
-      <div id="startFoot" style="font-size:12px;opacity:.75;text-shadow:0 1px 0 var(--ink)"></div>
     </div>
 
     <!-- MAP -->
@@ -472,33 +467,14 @@ body.vkb #frame{padding-bottom:calc(env(safe-area-inset-bottom) + 112px)}
       </div>
     </div></div>
 
-    <!-- Согласие с документами при первом запуске (правила VK 1.1.4, 2.1.5):
-         без принятия игра недоступна, реклама не показывается -->
-    <div class="modal hide" id="m-consent"><div class="panel glass" style="width:min(94%,440px)">
-      <div class="mtitle" data-l="tosTitle"></div>
-      <div style="text-align:center;font-size:13.5px;line-height:1.5"><span class="ageChip">0+</span><span id="tosText"></span></div>
-      <div class="row" style="justify-content:center;gap:8px;flex-wrap:wrap">
-        <button class="pill small alt" id="btnTosTerms" data-l="termsBtn"></button>
-        <button class="pill small alt" id="btnTosPriv" data-l="privacyBtn"></button>
-      </div>
-      <button class="pill big grn" id="btnTosOk" data-l="tosAccept"></button>
-      <div style="text-align:center"><button class="linkish" id="btnTosNo" data-l="tosDecline"></button></div>
-    </div></div>
-
-    <!-- Пользовательское соглашение / Политика конфиденциальности (инлайн, без внешних ссылок — правила 4.2.3) -->
+    <!-- Пользовательское соглашение / Политика конфиденциальности (инлайн, без внешних ссылок — правила 4.2.3);
+         открывается из настроек -->
     <div class="modal hide" id="m-legal"><div class="panel glass" style="width:min(94%,460px)">
       <button class="icobtn xbtn" data-close>✕</button>
       <div class="mtitle" id="legalTitle"></div>
       <div class="scroll" style="max-height:62vh"><div class="legalTxt" id="legalText"></div></div>
     </div></div>
 
-    <!-- Заглушка при отказе принять документы (правила 1.1.9, 2.3.9) -->
-    <div class="hide" id="scr-denied">
-      <div style="font-size:44px">🔒</div>
-      <div class="mtitle" data-l="deniedTitle"></div>
-      <div style="font-size:14px;font-weight:700;line-height:1.5;opacity:.9" data-l="deniedText"></div>
-      <button class="pill big" id="btnDeniedAgain" data-l="deniedAgain"></button>
-    </div>
 
     <div id="banner" class="hide"><div id="bannerTxt"></div></div>
     <div id="toasts"></div>
@@ -594,7 +570,7 @@ const IMG_DATA = {
 
 'use strict';
 /* ==================== TINY ROCKET / КРОХА-РАКЕТА ==================== */
-const VERSION = '1.8.0';
+const VERSION = '1.9.0';
 /* Контакт поддержки (правила VK 2.4.1/2.4.2). ЗАМЕНИТЕ на реальный e-mail/сообщество! */
 const SUPPORT_CONTACT = 'privacy@example.com';
 /* Отладочный доступ (__TR) — только с ?debug=1, чтобы в релизе не было
@@ -615,13 +591,6 @@ ru: {
   next:'ДАЛЬШЕ ›', retry:'ПОВТОРИТЬ', yes:'ДА', no:'НЕТ', open:'ОТКРЫТЬ',
   sound:'Звуки', music:'Музыка', language:'Язык', sdk:'SDK', reset:'Сбросить прогресс',
   resetQ:'Точно сбросить ВЕСЬ прогресс?',
-  tosTitle:'Добро пожаловать!',
-  tosAge:'Возрастная категория: 0+. Чтобы начать игру, примите, пожалуйста, Пользовательское соглашение и Политику конфиденциальности.',
-  tosAccept:'ПРИНЯТЬ И ИГРАТЬ',
-  tosDecline:'Не принимать',
-  deniedTitle:'Игра недоступна без принятия документов',
-  deniedText:'Чтобы играть, необходимо принять Пользовательское соглашение и Политику конфиденциальности. Игра бесплатна, не имеет собственных серверов и не собирает персональных данных: прогресс хранится в вашем аккаунте ВКонтакте и на вашем устройстве.',
-  deniedAgain:'Ознакомиться и принять',
   privacyBtn:'Политика конфиденциальности',
   termsBtn:'Соглашение',
   supportLbl:'Поддержка',
@@ -708,13 +677,6 @@ en: {
   next:'NEXT ›', retry:'RETRY', yes:'YES', no:'NO', open:'OPEN',
   sound:'Sound FX', music:'Music', language:'Language', sdk:'SDK', reset:'Reset progress',
   resetQ:'Reset ALL progress for sure?',
-  tosTitle:'Welcome!',
-  tosAge:'Age rating: 0+. To start playing, please accept the User Agreement and the Privacy Policy.',
-  tosAccept:'ACCEPT AND PLAY',
-  tosDecline:'Do not accept',
-  deniedTitle:'The game is unavailable without accepting the documents',
-  deniedText:'To play, you must accept the User Agreement and the Privacy Policy. The game is free, has no own servers and collects no personal data: your progress is stored in your VK account and on your device.',
-  deniedAgain:'Read and accept',
   privacyBtn:'Privacy Policy',
   termsBtn:'Agreement',
   supportLbl:'Support',
@@ -1165,15 +1127,15 @@ const VKB = (() => {
      VKWebAppShowBannerAd {banner_location:'bottom'} — единственный вызов:
      без предварительного VKWebAppCheckBannerAd, без banner_align, без ретраев.
      Отказ молча игнорируется (на web-версии VK баннеры не поддерживаются —
-     это нормально). Точки вызова: после открытия рекламного гейта (согласие +
-     онбординг завершены — правила 5.1.4.2а/б), после каждой полноэкранной
+     это нормально). Точки вызова: после открытия рекламного гейта
+     (онбординг завершён — правила 5.1.4.2а/б), после каждой полноэкранной
      рекламы (через preloadChecks), по VKWebAppViewRestore и visibilitychange.
      Баннер никогда не скрывается (HideBannerAd не зовём). */
   let gateOpen = false, bannerPending = false;
   function openAdGate(){
     if (gateOpen) return;
     gateOpen = true;
-    adLog('ad gate open (consent accepted)');
+    adLog('ad gate open (onboarding done)');
     if (bannerPending) showVkBanner();
     applyBannerInset();
   }
@@ -1194,7 +1156,7 @@ const VKB = (() => {
   }
   function showVkBanner(){
     if (!inVK) return;
-    if (!gateOpen){ bannerPending = true; return; }   // до согласия/онбординга баннера нет
+    if (!gateOpen){ bannerPending = true; return; }   // до онбординга баннера нет
     bannerPending = false;
     adLog('banner → VKWebAppShowBannerAd {banner_location:bottom}');
     try { send('VKWebAppShowBannerAd', {banner_location:'bottom'}).catch(()=>{}); } catch(e){}
@@ -1277,7 +1239,7 @@ const SDK = (() => {
   const interstitial = () => {
     const now = performance.now();
     const vkRoute = !has() && VKB.inVK;
-    if (vkRoute && !VKB.gateOpen) return;             // до согласия/онбординга медиарекламы нет (правила 5.1.5.2б)
+    if (vkRoute && !VKB.gateOpen) return;             // до онбординга медиарекламы нет (правила 5.1.5.2б)
     if (now - sessionStart < (vkRoute ? 120000 : 60000)) return;   // запрет первые 60/120 сек сессии
     if (now - lastInter < 180000) return;            // кулдаун 180 сек (правила: не чаще 1 раза в 30 сек)
     onReady(() => {
@@ -1573,8 +1535,6 @@ const UI = (() => {
     $('gameTitle').textContent = L('title');
     $('gameSub').textContent = L('sub');
     UI.soundBtn();
-    const sf = $('startFoot'); if (sf) sf.textContent = 'v' + VERSION + ' · 0+';
-    renderTos();
     if (legalOpen && !$('m-legal').classList.contains('hide')) openLegal(legalOpen);
     if (!modalStack.includes('m-result')) renderStartMeta();
     UI.dust(); UI.stars();
@@ -1927,12 +1887,11 @@ const UI = (() => {
 })();
 
 /* ============ Согласие, документы, поддержка (правила VK 1.1.4, 2.1.5, 2.4.1/2.4.2) ============
-   Первый запуск: пользователь принимает Пользовательское соглашение и Политику
-   конфиденциальности (с указанием возраста 0+) — и только потом получает доступ
-   к игре. Никакой рекламы до согласия и до завершения онбординга.            */
+   Отдельного экрана-согласия нет (игра не собирает персональных данных),
+   документы доступны из настроек в любой момент. Реклама включается только
+   после завершения онбординга (правила 5.1.4.2а, 5.1.5.2б).                  */
 let legalOpen = null;
 let gateAfterHelp = false;
-function renderTos(){ const t = $('tosText'); if (t) t.textContent = L('tosAge'); }
 function openLegal(which){
   legalOpen = which;
   $('legalTitle').textContent = L(which === 'terms' ? 'termsTitle' : 'privacyTitle');
@@ -1944,7 +1903,7 @@ function adsGateOpen(){
   try { VKB.openAdGate(); } catch(e){}
   SDK.banner(true);
 }
-function afterConsent(){
+function enterGame(){
   if (!S.seen.help){ S.seen.help = 1; saveLocal(); gateAfterHelp = true; setTimeout(()=>UI.openHelp(), 350); }
   else adsGateOpen();
 }
@@ -2027,13 +1986,7 @@ function wireUI(){
   $('btnContNo').onclick = () => { UI.closeModal('m-continue'); GAME.finishFail(); };
   /* chest modal */
   $('btnChestOpen').onclick = () => chestOpenClick();
-  /* consent + документы + поддержка */
-  renderTos();
-  $('btnTosOk').onclick = () => { Audio.sfx.click(); S.seen.tos = true; saveLocal(); UI.closeModal('m-consent'); afterConsent(); };
-  $('btnTosNo').onclick = () => { Audio.sfx.click(); UI.closeModal('m-consent'); const d = $('scr-denied'); if (d) d.classList.remove('hide'); };
-  $('btnDeniedAgain').onclick = () => { Audio.sfx.click(); const d = $('scr-denied'); if (d) d.classList.add('hide'); renderTos(); UI.modal('m-consent'); };
-  $('btnTosPriv').onclick = () => { Audio.sfx.click(); openLegal('privacy'); };
-  $('btnTosTerms').onclick = () => { Audio.sfx.click(); openLegal('terms'); };
+  /* документы + поддержка (доступны из настроек; экрана-согласия нет) */
   $('btnPrivacy').onclick = () => { Audio.sfx.click(); openLegal('privacy'); };
   $('btnTerms').onclick = () => { Audio.sfx.click(); openLegal('terms'); };
   const sv = $('supportVal'); if (sv) sv.textContent = SUPPORT_CONTACT;
@@ -3454,12 +3407,10 @@ async function boot(){
   pre.classList.add('hide');
   UI.show('scr-start');
   UI.fullRefresh();
-  /* правила VK 1.1.4 + 2.1.5: доступ к приложению — только после принятия
-     Пользовательского соглашения и Политики конфиденциальности (0+).
-     Реклама (баннер/медиареклама) включается после согласия и онбординга
-     (правила 5.1.4.2а, 5.1.5.2б). */
-  if (!S.seen.tos) UI.modal('m-consent');
-  else afterConsent();
+  /* правила VK 5.1.4.2а/5.1.5.2б: реклама включается только после онбординга.
+     Экрана-согласия нет: игра не собирает персональных данных, документы
+     (соглашение + политика) доступны из настроек и в витрине VK. */
+  enterGame();
   /* gameStart после первого кадра */
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     if (!gameStarted){ gameStarted = true; SDK.gameStart(); }
