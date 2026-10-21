@@ -116,6 +116,17 @@ body{
 .modal>.panel{pointer-events:auto;width:min(92%,420px);max-height:94%;padding:22px 18px 18px;display:flex;flex-direction:column;gap:12px;
   animation:springIn .5s cubic-bezier(.22,1.5,.36,1)}
 .modal.closing>.panel{animation:springOut .18s ease-in forwards}
+/* ---------- соответствие правилам VK: согласие, документы, зона баннера ---------- */
+#m-consent{pointer-events:auto;background:rgba(10,4,26,.66);z-index:60}
+#m-legal{z-index:62}
+.legalTxt{font-size:13px;font-weight:600;line-height:1.55;white-space:pre-wrap;text-align:left}
+.linkish{background:none;border:0;color:#ffe3e8;text-decoration:underline;font:inherit;font-size:12.5px;font-weight:700;opacity:.9;cursor:pointer;padding:8px 10px;min-height:36px}
+.ageChip{display:inline-block;border:2px solid #fff;border-radius:9px;padding:0 8px;font-weight:900;font-size:14px;margin-right:6px;vertical-align:middle}
+#scr-denied{position:absolute;inset:0;z-index:70;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:28px;text-align:center;background:linear-gradient(180deg,#1b0b38,#160a30)}
+/* нижний баннер в мобильном приложении VK рисуется поверх WebView — резервируем
+   снизу 112px (баннер ≈90px + зазор ≥20px), чтобы баннер не перекрывал игровую
+   область и кнопки (правила 5.1.4.2 в/г/д) */
+body.vkb #frame{padding-bottom:calc(env(safe-area-inset-bottom) + 112px)}
 @keyframes springIn{0%{transform:scale(.55) translateY(70px);opacity:0}55%{transform:scale(1.07) translateY(-8px);opacity:1}75%{transform:scale(.97) translateY(2px)}100%{transform:scale(1) translateY(0)}}
 @keyframes springOut{to{transform:scale(.7) translateY(60px);opacity:0}}
 .xbtn{position:absolute;top:10px;right:10px;width:46px;height:46px;z-index:5}
@@ -358,6 +369,11 @@ body{
         <div class="row" style="justify-content:space-between"><span data-l="rmMode"></span><div class="sw" id="swRm"></div></div>
         <div class="row" style="justify-content:space-between"><span data-l="bigHud"></span><div class="sw" id="swBig"></div></div>
         <div class="row" style="justify-content:space-between"><span data-l="sdk"></span><b id="sdkState">—</b></div>
+        <div class="row" style="justify-content:space-between"><span data-l="supportLbl"></span><b id="supportVal" style="font-size:11.5px;word-break:break-all">—</b></div>
+        <div class="row" style="gap:8px">
+          <button class="pill alt small" style="flex:1" id="btnPrivacy" data-l="privacyBtn"></button>
+          <button class="pill alt small" style="flex:1" id="btnTerms" data-l="termsBtn"></button>
+        </div>
         <button class="pill red small" id="btnReset" data-l="reset"></button>
       </div>
     </div></div>
@@ -441,6 +457,7 @@ body{
         <div class="qrow"><img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" data-img="station.png" style="width:56px;height:46px" alt=""><div style="flex:1;font-size:14px" data-l="helpGoal"></div></div>
         <div class="qrow"><span class="row" style="gap:4px"><img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" data-img="asteroid_small.png" style="width:38px;height:38px" alt=""><img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" data-img="ring.png" style="width:38px;height:38px" alt=""><img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" data-img="fuel_can.png" style="width:32px;height:36px" alt=""></span><div style="flex:1;font-size:14px" data-l="helpDanger"></div></div>
         <div class="qrow"><img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" data-img="cargo_common_01.png" style="width:40px;height:40px" alt=""><div style="flex:1;font-size:14px" data-l="helpCargo"></div></div>
+        <div class="qrow"><span style="font-size:30px">📺</span><div style="flex:1;font-size:14px" data-l="helpAds"></div></div>
       </div></div>
       <button class="pill big" id="btnHelpGo" data-l="helpGo"></button>
     </div></div>
@@ -454,6 +471,34 @@ body{
         <button class="pill red" id="cfNo" data-l="no"></button>
       </div>
     </div></div>
+
+    <!-- Согласие с документами при первом запуске (правила VK 1.1.4, 2.1.5):
+         без принятия игра недоступна, реклама не показывается -->
+    <div class="modal hide" id="m-consent"><div class="panel glass" style="width:min(94%,440px)">
+      <div class="mtitle" data-l="tosTitle"></div>
+      <div style="text-align:center;font-size:13.5px;line-height:1.5"><span class="ageChip">0+</span><span id="tosText"></span></div>
+      <div class="row" style="justify-content:center;gap:8px;flex-wrap:wrap">
+        <button class="pill small alt" id="btnTosTerms" data-l="termsBtn"></button>
+        <button class="pill small alt" id="btnTosPriv" data-l="privacyBtn"></button>
+      </div>
+      <button class="pill big grn" id="btnTosOk" data-l="tosAccept"></button>
+      <div style="text-align:center"><button class="linkish" id="btnTosNo" data-l="tosDecline"></button></div>
+    </div></div>
+
+    <!-- Пользовательское соглашение / Политика конфиденциальности (инлайн, без внешних ссылок — правила 4.2.3) -->
+    <div class="modal hide" id="m-legal"><div class="panel glass" style="width:min(94%,460px)">
+      <button class="icobtn xbtn" data-close>✕</button>
+      <div class="mtitle" id="legalTitle"></div>
+      <div class="scroll" style="max-height:62vh"><div class="legalTxt" id="legalText"></div></div>
+    </div></div>
+
+    <!-- Заглушка при отказе принять документы (правила 1.1.9, 2.3.9) -->
+    <div class="hide" id="scr-denied">
+      <div style="font-size:44px">🔒</div>
+      <div class="mtitle" data-l="deniedTitle"></div>
+      <div style="font-size:14px;font-weight:700;line-height:1.5;opacity:.9" data-l="deniedText"></div>
+      <button class="pill big" id="btnDeniedAgain" data-l="deniedAgain"></button>
+    </div>
 
     <div id="banner" class="hide"><div id="bannerTxt"></div></div>
     <div id="toasts"></div>
@@ -549,7 +594,13 @@ const IMG_DATA = {
 
 'use strict';
 /* ==================== TINY ROCKET / КРОХА-РАКЕТА ==================== */
-const VERSION = '1.7.0';
+const VERSION = '1.8.0';
+/* Контакт поддержки (правила VK 2.4.1/2.4.2). ЗАМЕНИТЕ на реальный e-mail/сообщество! */
+const SUPPORT_CONTACT = 'privacy@example.com';
+/* Отладочный доступ (__TR) — только с ?debug=1, чтобы в релизе не было
+   «тестового контента» (правила VK 4.1.3) */
+const DEBUG_HOOKS = /[?&#]debug=1(&|#|$)/.test(location.search + location.hash)
+  || ['localhost','127.0.0.1','0.0.0.0'].includes(location.hostname) || location.protocol === 'file:';
 /* ---------- GamePush project credentials: fill from GamePush panel ---------- */
 const GP_PROJECT_ID = 0;              // <- ID проекта из панели GamePush
 const GP_PUBLIC_TOKEN = '';           // <- публичный ключ из панели GamePush
@@ -564,6 +615,20 @@ ru: {
   next:'ДАЛЬШЕ ›', retry:'ПОВТОРИТЬ', yes:'ДА', no:'НЕТ', open:'ОТКРЫТЬ',
   sound:'Звуки', music:'Музыка', language:'Язык', sdk:'SDK', reset:'Сбросить прогресс',
   resetQ:'Точно сбросить ВЕСЬ прогресс?',
+  tosTitle:'Добро пожаловать!',
+  tosAge:'Возрастная категория: 0+. Чтобы начать игру, примите, пожалуйста, Пользовательское соглашение и Политику конфиденциальности.',
+  tosAccept:'ПРИНЯТЬ И ИГРАТЬ',
+  tosDecline:'Не принимать',
+  deniedTitle:'Игра недоступна без принятия документов',
+  deniedText:'Чтобы играть, необходимо принять Пользовательское соглашение и Политику конфиденциальности. Игра бесплатна, не имеет собственных серверов и не собирает персональных данных: прогресс хранится в вашем аккаунте ВКонтакте и на вашем устройстве.',
+  deniedAgain:'Ознакомиться и принять',
+  privacyBtn:'Политика конфиденциальности',
+  termsBtn:'Соглашение',
+  supportLbl:'Поддержка',
+  privacyTitle:'Политика конфиденциальности',
+  privacyText:'Игра «Кроха-Ракета» (возрастная категория 0+) работает полностью на устройстве пользователя, не имеет собственных серверов и не собирает персональные данные самостоятельно.\n\nКакие данные обрабатываются и зачем:\n· идентификатор пользователя ВКонтакте и состояние хранилища платформы (VK Bridge, методы Storage) — исключительно для сохранения и синхронизации игрового прогресса между устройствами;\n· языковые настройки (параметр запуска vk_language) — для выбора языка интерфейса;\n· технические сведения об устройстве (размер экрана, производительность) — для адаптации графики и управления;\n· сведения об игровых сессиях обрабатываются платформой ВКонтакте обезличенно для показа рекламы; разработчик эти данные не получает.\n\nГде хранятся данные: игровой прогресс — в хранилище вашего аккаунта ВКонтакте и локально на вашем устройстве. Разработчик не передаёт данные третьим лицам, кроме платформы ВКонтакте в объёме, необходимом для работы игры.\n\nРеклама показывается средствами платформы ВКонтакте (баннер, ролики между уровнями, вознаграждаемые ролики). Разработчик не получает ваших персональных данных из рекламы.\n\nУдаление данных: прогресс можно полностью сбросить в настройках игры («Сбросить прогресс»). Для удаления данных и по любым вопросам обработки данных напишите на ' + SUPPORT_CONTACT + ' — ответ будет направлен не позднее 7 календарных дней.',
+  termsTitle:'Пользовательское соглашение',
+  termsText:'Принимая настоящее соглашение, вы получаете бесплатную неисключительную лицензию на использование игры «Кроха-Ракета» в пределах платформы ВКонтакте.\n\n· Игра бесплатна. Покупки за реальные деньги в игре отсутствуют.\n· Игровая валюта ✦, скины и предметы зарабатываются только игровым путём, не имеют денежной ценности, не выводятся и не обмениваются на деньги, цифровые или физические ценности.\n· Реклама в игре: баннер внизу экрана, короткие ролики при переходе между уровнями (не чаще одного раза в 3 минуты) и вознаграждаемые ролики. Вознаграждаемый ролик запускается только по вашему нажатию, награда всегда указана на кнопке и выдаётся после просмотра. Отказ от просмотра рекламы не ограничивает прохождение игры: все награды доступны и за ✦ или игровые действия.\n· Уровень, очки и награды начисляются только за активные игровые действия.\n· Запрещаются взлом игры, использование стороннего программного обеспечения и накрутка показателей.\n· Поддержка и связь с разработчиком: ' + SUPPORT_CONTACT + '. Ответ на обращение — не позднее 7 календарных дней.\n\nДоступ к игре может быть ограничен Администрацией ВКонтакте в соответствии с Правилами платформы.',
   cargoDelivered:'ГРУЗ ДОСТАВЛЕН!', cargoBroken:'ГРУЗ РАЗБИТ…',
   delivery:'Доставка груза', levelDone:'Уровень пройден', bossDone:'Босс побеждён',
   comboBonus:'Комбо без урона', rings:'Кольца', cans:'Канистры', total:'ИТОГО',
@@ -602,6 +667,7 @@ ru: {
   helpGoal:'Задача: долететь до станции и доставить ХРУПКИЙ груз. Столкновения снижают целостность: 100% = награда ×5, а 4 удара = груз разбит. По пути собирай кольца (+5 ✦) и канистры (+3 ✦).',
   helpCargo:'Грузы — это посылки, которые ты доставляешь, и награда-коллекция: полученный груз попадает в коллекцию и навсегда даёт +2% к доходу ✦. Редкие грузы выпадают за доставку без урона и из сундуков.',
   helpDanger:'Красное свечение = опасно (астероиды, лазеры, магниты-ловушки). Золотое и зелёное свечение = бери (кольца, канистры).',
+  helpAds:'Реклама: внизу экрана может показываться баннер, а при переходе между уровнями — короткий ролик. Ролики за награду (📺) запускаются только по твоему нажатию, награда указана на кнопке и выдаётся после просмотра. Игра полностью проходима без просмотра рекламы.',
   tutRing:'КОЛЬЦО — БЕРИ! +5 ✦', tutRock:'АСТЕРОИД — НЕ ТРОГАЙ! −25% груза', tutStation:'СТАНЦИЯ — ДОСТАВЬ ГРУЗ!',
   tipCargo:'Грузы попадают в коллекцию: каждый новый даёт +2% к доходу ✦',
   foot:'Сделано с любовью к космосу · космическая курьерская служба',
@@ -642,6 +708,20 @@ en: {
   next:'NEXT ›', retry:'RETRY', yes:'YES', no:'NO', open:'OPEN',
   sound:'Sound FX', music:'Music', language:'Language', sdk:'SDK', reset:'Reset progress',
   resetQ:'Reset ALL progress for sure?',
+  tosTitle:'Welcome!',
+  tosAge:'Age rating: 0+. To start playing, please accept the User Agreement and the Privacy Policy.',
+  tosAccept:'ACCEPT AND PLAY',
+  tosDecline:'Do not accept',
+  deniedTitle:'The game is unavailable without accepting the documents',
+  deniedText:'To play, you must accept the User Agreement and the Privacy Policy. The game is free, has no own servers and collects no personal data: your progress is stored in your VK account and on your device.',
+  deniedAgain:'Read and accept',
+  privacyBtn:'Privacy Policy',
+  termsBtn:'Agreement',
+  supportLbl:'Support',
+  privacyTitle:'Privacy Policy',
+  privacyText:'The game "Tiny Rocket" (age rating 0+) runs entirely on the user device, has no own servers and does not collect personal data by itself.\n\nWhat data is processed and why:\n· your VK user id and the platform storage state (VK Bridge Storage methods) — solely to save and sync your game progress between devices;\n· language settings (vk_language launch parameter) — to choose the interface language;\n· technical device info (screen size, performance) — to adapt graphics and controls;\n· game session data is processed by the VK platform in anonymized form for ad serving; the developer does not receive it.\n\nWhere data is stored: game progress — in your VK account storage and locally on your device. The developer does not share data with third parties except the VK platform, to the extent required for the game to work.\n\nAds are served by the VK platform (banner, between-level videos, rewarded videos). The developer receives no personal data from ads.\n\nData deletion: you can fully reset progress in the game settings ("Reset progress"). To delete your data or ask any privacy question, write to ' + SUPPORT_CONTACT + ' — a reply will be sent within 7 calendar days.',
+  termsTitle:'User Agreement',
+  termsText:'By accepting this agreement you receive a free non-exclusive license to use the game "Tiny Rocket" within the VK platform.\n\n· The game is free. There are no real-money purchases.\n· The ✦ currency, skins and items are earned only through gameplay, have no monetary value, cannot be withdrawn or exchanged for money, digital or physical goods.\n· Ads in the game: a banner at the bottom, short videos between levels (no more than once per 3 minutes) and rewarded videos. A rewarded video starts only on your tap, the reward is always shown on the button and is granted after watching. Refusing to watch ads does not limit the game: all rewards are also available for ✦ or gameplay.\n· Levels, scores and rewards are granted only for active gameplay actions.\n· Hacking the game, using third-party software and score boosting are prohibited.\n· Support and developer contact: ' + SUPPORT_CONTACT + '. Replies are sent within 7 calendar days.\n\nAccess to the game may be limited by the VK administration in accordance with the Platform Rules.',
   cargoDelivered:'CARGO DELIVERED!', cargoBroken:'CARGO BROKEN…',
   delivery:'Cargo delivery', levelDone:'Level complete', bossDone:'Boss defeated',
   comboBonus:'No-damage combo', rings:'Rings', cans:'Fuel cans', total:'TOTAL',
@@ -680,6 +760,7 @@ en: {
   helpGoal:'Goal: reach the station and deliver the FRAGILE cargo. Hits cut integrity: 100% = reward ×5, 4 hits = cargo broken. On the way collect rings (+5 ✦) and fuel cans (+3 ✦).',
   helpCargo:'Cargos are the parcels you deliver AND your collection: every cargo you earn joins the collection and forever gives +2% ✦ income. Rare cargos drop for no-damage deliveries and from chests.',
   helpDanger:'Red glow = danger (asteroids, lasers, magnet traps). Gold and green glow = grab (rings, fuel cans).',
+  helpAds:'Ads: a banner may appear at the bottom, plus a short video between levels. Rewarded videos (📺) start only on your tap, the reward is shown on the button and granted after watching. The game is fully playable without watching ads.',
   tutRing:'RING — GRAB IT! +5 ✦', tutRock:"ASTEROID — DON'T TOUCH! −25% cargo", tutStation:'STATION — DELIVER THE CARGO!',
   tipCargo:'Cargos join your collection: each new one gives +2% ✦ income',
   foot:'Made with love for space · cosmic courier service',
@@ -846,7 +927,7 @@ function defaultSave(){
            days:0, streak:0, lastDay:'', lvl2x:false, hcBoss:false, legend:false, chests:0,
            grazes:0, burns:0, dist:0, playMs:0, weak:0},
     set:{sound:true, music:true, lang:null, cb:false, rm:false, big:false},
-    seen:{preload:false, tips:{}},
+    seen:{preload:false, tips:{}, tos:false},
     log:{pts:0, step:0},
     daily:{day:'', best:0, tops:[]},
     week:{id:'', w:{wDeliver:0,wGraze:0,wBoss:0}, claimed:{}}};
@@ -923,16 +1004,20 @@ const VKB = (() => {
       if (window.vkBridge && window.vkBridge.subscribe) {
         window.vkBridge.subscribe(ev => {
           const t = ev && ev.detail && ev.detail.type;
-          if (t === 'VKWebAppViewHide'){ GAME.autoPaused = true; GAME.pause(true); rewardViewHide(); adLog('ViewHide → pause'); }
-          if (t === 'VKWebAppViewRestore'){ rewardViewRestore(); showVkBanner(); if (GAME.autoPaused){ GAME.autoPaused = false; GAME.resume(); adLog('ViewRestore → resume'); } }
+          if (t === 'VKWebAppViewHide'){ GAME.autoPaused = true; GAME.pause(true); Audio.suspendAll(); rewardViewHide(); adLog('ViewHide → pause + mute'); }
+          if (t === 'VKWebAppViewRestore'){ Audio.resume(); rewardViewRestore(); showVkBanner(); if (GAME.autoPaused){ GAME.autoPaused = false; GAME.resume(); adLog('ViewRestore → resume'); } }
         });
       }
     } catch(e){}
     if (inVK){
       try { send('VKWebAppSetViewSettings', {status_bar_style:'dark', action_bar_color:'#160a30'}).catch(()=>{}); } catch(e){}
-      /* как в релизе: при каждом возврате в игру баннер показывается снова —
-         VK может снимать его после полноэкранной рекламы/сворачивания */
-      try { document.addEventListener('visibilitychange', () => { if (!document.hidden) showVkBanner(); }); } catch(e){}
+      /* правила VK 2.2.5: при сворачивании/закрытии сообщаем платформе
+         (VKWebAppViewHide) и глушим звук; при возврате — ViewRestore и баннер */
+      try { document.addEventListener('visibilitychange', () => {
+        if (document.hidden){ Audio.suspendAll(); send('VKWebAppViewHide').catch(()=>{}); }
+        else { Audio.resume(); send('VKWebAppViewRestore').catch(()=>{}); showVkBanner(); }
+      }); } catch(e){}
+      try { window.addEventListener('pagehide', () => { Audio.suspendAll(); send('VKWebAppViewHide').catch(()=>{}); }); } catch(e){}
     }
     preloadChecks();
     finish();
@@ -965,23 +1050,26 @@ const VKB = (() => {
       if (!bridgeLoaded){ adLog('bridge not loaded → web mode'); inVK = false; finish(); return; }
       if (!insideGuess()){ adLog('not VK env → web mode'); inVK = false; finish(); return; }
       inVK = true;   // среда похожа на VK — инициализируемся (в web-версии часть вызовов упадёт в catch)
-      send('VKWebAppInit').then(() => { adLog('VKWebAppInit OK'); return send('VKWebAppGetUserInfo').catch(()=>null); })
-        .then(u => { afterInit(); return u; })
+      send('VKWebAppInit').then(() => { adLog('VKWebAppInit OK'); afterInit(); })
         .catch(() => { inVK = insideGuess(); afterInit(); });
       setTimeout(() => { if (!done){ inVK = inVK || insideGuess(); afterInit(); } }, 5000);
     };
     if (adopt()){ boot(); return; }   // vk-bridge встроен в <head> локально — доступен сразу
     tryNext();
   }
-  const lang = () => new Promise(res => {
+  const lang = () => {
+    /* правила VK 3.1.2: язык из настроек ВКонтакте (параметр запуска vk_language —
+       в мобильном приложении приходит в hash); нет перевода на язык пользователя →
+       русский. Данные профиля не запрашиваем (правила 1.1.2). */
     try {
+      const m = /(?:\?|&#|&)vk_language=([a-zA-Z]{2,3})/.exec(location.search + ' ' + location.hash);
+      if (m) return Promise.resolve(m[1].toLowerCase() === 'en' ? 'en' : 'ru');
       const q = new URLSearchParams(location.search);
       const vl = q.get('vk_language') || q.get('language');
-      if (vl === 'ru' || vl === 'en') return res(vl);
+      if (vl) return Promise.resolve(vl.toLowerCase() === 'en' ? 'en' : 'ru');
     } catch(e){}
-    if (!bridgeLoaded) return res(null);
-    send('VKWebAppGetUserInfo').then(u => res(u && u.lang ? u.lang : null)).catch(()=>res(null));
-  });
+    return Promise.resolve(null);
+  };
   /* вне VK-ифрейма (прямое открытие) не ждём мост: мгновенные фолбэки, как в релизе */
   const standalone = () => { try { return window.parent === window && !insideGuess(); } catch(e){ return false; } };
   /* --- реклама: проверенная схема нативных объявлений VK --- */
@@ -1077,17 +1165,44 @@ const VKB = (() => {
      VKWebAppShowBannerAd {banner_location:'bottom'} — единственный вызов:
      без предварительного VKWebAppCheckBannerAd, без banner_align, без ретраев.
      Отказ молча игнорируется (на web-версии VK баннеры не поддерживаются —
-     это нормально). Точки вызова: после VKWebAppInit, после каждой
-     полноэкранной рекламы (через preloadChecks), по VKWebAppViewRestore и
-     visibilitychange. Баннер никогда не скрывается (HideBannerAd не зовём). */
+     это нормально). Точки вызова: после открытия рекламного гейта (согласие +
+     онбординг завершены — правила 5.1.4.2а/б), после каждой полноэкранной
+     рекламы (через preloadChecks), по VKWebAppViewRestore и visibilitychange.
+     Баннер никогда не скрывается (HideBannerAd не зовём). */
+  let gateOpen = false, bannerPending = false;
+  function openAdGate(){
+    if (gateOpen) return;
+    gateOpen = true;
+    adLog('ad gate open (consent accepted)');
+    if (bannerPending) showVkBanner();
+    applyBannerInset();
+  }
+  /* правила 5.1.4.2в/г/д: в мобильном приложении VK нижний баннер рисуется
+     поверх WebView — резервируем снизу 112px (баннер ≈90px + зазор ≥20px),
+     чтобы игровая область и кнопки никогда не оказывались под баннером */
+  function applyBannerInset(){
+    try {
+      const s = location.search + ' ' + location.hash;
+      const mob = /vk_platform=(mobile_android|mobile_iphone)/.test(s)
+        || /VKClient|VKApp|com\.vk\./i.test(navigator.userAgent || '');
+      if (inVK && mob && !document.body.classList.contains('vkb')){
+        document.body.classList.add('vkb');
+        try { GAME.resize(); } catch(e){}
+        adLog('banner safe-zone ON (mobile VK)');
+      }
+    } catch(e){}
+  }
   function showVkBanner(){
     if (!inVK) return;
+    if (!gateOpen){ bannerPending = true; return; }   // до согласия/онбординга баннера нет
+    bannerPending = false;
     adLog('banner → VKWebAppShowBannerAd {banner_location:bottom}');
     try { send('VKWebAppShowBannerAd', {banner_location:'bottom'}).catch(()=>{}); } catch(e){}
   }
   const banner = on => { if (on) onReady(showVkBanner); };   // «выкл» = просто не повторять показ
   const taptic = t => { if (inVK) send('VKWebAppTapticImpactOccurred', {type:t}).catch(()=>{}); };
-  return {inject, onReady, lang, save, load, taptic, showInterstitial, showRewarded, checkAds, banner, showVkBanner,
+  return {inject, onReady, lang, save, load, taptic, showInterstitial, showRewarded, checkAds, banner, showVkBanner, openAdGate,
+          get gateOpen(){ return gateOpen; },
           get inVK(){ return inVK; }, get bridgeLoaded(){ return bridgeLoaded; }};
 })();
 
@@ -1162,8 +1277,9 @@ const SDK = (() => {
   const interstitial = () => {
     const now = performance.now();
     const vkRoute = !has() && VKB.inVK;
+    if (vkRoute && !VKB.gateOpen) return;             // до согласия/онбординга медиарекламы нет (правила 5.1.5.2б)
     if (now - sessionStart < (vkRoute ? 120000 : 60000)) return;   // запрет первые 60/120 сек сессии
-    if (now - lastInter < 180000) return;            // кулдаун 180 сек
+    if (now - lastInter < 180000) return;            // кулдаун 180 сек (правила: не чаще 1 раза в 30 сек)
     onReady(() => {
       if (gp){ (call('ads','showFullscreen') ?? call('advertisement','fullscreen')); lastInter = now; }
       else if (VKB.inVK){ lastInter = now; VKB.showInterstitial(); }
@@ -1269,6 +1385,13 @@ const Audio = (() => {
     sfxG.gain.value = sfxMuted ? 0 : 1;
     musG.gain.value = (musMuted || !musicOn) ? 0 : .5; };
   const resume = () => { const c=ensure(); if (c && c.state==='suspended') c.resume().catch(()=>{}); };
+  /* правила VK 2.2.5: при сворачивании/закрытии приложения звук должен
+     полностью останавливаться — глушим движок и приостанавливаем контекст */
+  const suspendAll = () => {
+    try { thrust(false); } catch(e){}
+    try { music(false); } catch(e){}
+    try { if (ctx && ctx.state === 'running') ctx.suspend().catch(()=>{}); } catch(e){}
+  };
 
   function tone(f, t0, dur, type='square', vol=.3, slide=0, dest){
     if (!ctx) return;
@@ -1362,7 +1485,7 @@ const Audio = (() => {
   const setBoss = b => { bossOn = b; setTempo(lastSpeed); };
   let lastSpeed = 1;
 
-  return {ensure, resume, sfx, thrust, music, setTempo, setBoss,
+  return {ensure, resume, suspendAll, sfx, thrust, music, setTempo, setBoss,
     setMuted(m, fromSdk){ muted = m; S.set.sound = !m; applyGains(); if (!fromSdk) SDK.soundToggle(!m); },
     setSfxMuted(m){ sfxMuted = m; applyGains(); },
     setMusicMuted(m){ musMuted = m; S.set.music = !m; applyGains(); },
@@ -1450,6 +1573,9 @@ const UI = (() => {
     $('gameTitle').textContent = L('title');
     $('gameSub').textContent = L('sub');
     UI.soundBtn();
+    const sf = $('startFoot'); if (sf) sf.textContent = 'v' + VERSION + ' · 0+';
+    renderTos();
+    if (legalOpen && !$('m-legal').classList.contains('hide')) openLegal(legalOpen);
     if (!modalStack.includes('m-result')) renderStartMeta();
     UI.dust(); UI.stars();
     questBadge(); logBadge();
@@ -1515,7 +1641,7 @@ const UI = (() => {
   }
   function sdkState(){
     const e = $('sdkState'); if (!e) return;
-    e.textContent = SDK.has() ? 'GamePush ✓' : (VKB.inVK ? 'VK Bridge ✓' : 'offline (fallback)');
+    e.textContent = SDK.has() ? 'SDK ✓' : (VKB.inVK ? 'VK Bridge ✓' : 'offline (fallback)');
   }
 
   /* ---------- modals ---------- */
@@ -1529,6 +1655,10 @@ const UI = (() => {
     m.classList.add('closing');
     setTimeout(()=>{ m.classList.add('hide'); m.classList.remove('closing'); }, 180);
     modalStack = modalStack.filter(x=>x!==id);
+    /* правила VK 5.1.4.2а: баннер не показывается на онбординге — рекламный
+       гейт открывается только после закрытия обучения при первом запуске */
+    if (id === 'm-help' && typeof gateAfterHelp !== 'undefined' && gateAfterHelp) adsGateOpen();
+    if (id === 'm-legal') legalOpen = null;
   }
   const topModal = () => modalStack[modalStack.length-1] || null;
 
@@ -1796,6 +1926,29 @@ const UI = (() => {
           get cfCb(){ return cfCb; }, set cfCb(v){ cfCb = v; }};
 })();
 
+/* ============ Согласие, документы, поддержка (правила VK 1.1.4, 2.1.5, 2.4.1/2.4.2) ============
+   Первый запуск: пользователь принимает Пользовательское соглашение и Политику
+   конфиденциальности (с указанием возраста 0+) — и только потом получает доступ
+   к игре. Никакой рекламы до согласия и до завершения онбординга.            */
+let legalOpen = null;
+let gateAfterHelp = false;
+function renderTos(){ const t = $('tosText'); if (t) t.textContent = L('tosAge'); }
+function openLegal(which){
+  legalOpen = which;
+  $('legalTitle').textContent = L(which === 'terms' ? 'termsTitle' : 'privacyTitle');
+  $('legalText').textContent  = L(which === 'terms' ? 'termsText'  : 'privacyText');
+  UI.modal('m-legal');
+}
+function adsGateOpen(){
+  gateAfterHelp = false;
+  try { VKB.openAdGate(); } catch(e){}
+  SDK.banner(true);
+}
+function afterConsent(){
+  if (!S.seen.help){ S.seen.help = 1; saveLocal(); gateAfterHelp = true; setTimeout(()=>UI.openHelp(), 350); }
+  else adsGateOpen();
+}
+
 /* ============================== DOM wiring ============================== */
 function wireUI(){
   /* generic close */
@@ -1874,6 +2027,16 @@ function wireUI(){
   $('btnContNo').onclick = () => { UI.closeModal('m-continue'); GAME.finishFail(); };
   /* chest modal */
   $('btnChestOpen').onclick = () => chestOpenClick();
+  /* consent + документы + поддержка */
+  renderTos();
+  $('btnTosOk').onclick = () => { Audio.sfx.click(); S.seen.tos = true; saveLocal(); UI.closeModal('m-consent'); afterConsent(); };
+  $('btnTosNo').onclick = () => { Audio.sfx.click(); UI.closeModal('m-consent'); const d = $('scr-denied'); if (d) d.classList.remove('hide'); };
+  $('btnDeniedAgain').onclick = () => { Audio.sfx.click(); const d = $('scr-denied'); if (d) d.classList.add('hide'); renderTos(); UI.modal('m-consent'); };
+  $('btnTosPriv').onclick = () => { Audio.sfx.click(); openLegal('privacy'); };
+  $('btnTosTerms').onclick = () => { Audio.sfx.click(); openLegal('terms'); };
+  $('btnPrivacy').onclick = () => { Audio.sfx.click(); openLegal('privacy'); };
+  $('btnTerms').onclick = () => { Audio.sfx.click(); openLegal('terms'); };
+  const sv = $('supportVal'); if (sv) sv.textContent = SUPPORT_CONTACT;
 }
 
 /* rewarded helper: кнопка активна и без SDK (фолбэк выдаёт награду) */
@@ -3269,7 +3432,7 @@ async function boot(){
   VKB.inject();
   VKB.onReady(() => {
     if (SDK.has() || !VKB.inVK) return;
-    VKB.lang().then(l => { if (l && !S.set.lang){ const ll = l==='ru'?'ru':'en'; if (ll!==LANG) UI.setLang(ll); } });
+    VKB.lang().then(l => { if (l && !S.set.lang && l !== LANG) UI.setLang(l); });   // 3.1.2: язык ВКонтакте, иначе русский
     VKB.load().then(cloud => {
       if (cloud && cloud.v === 1 && (cloud.ts||0) > (S.ts||0)){ S = Object.assign(defaultSave(), cloud); UI.fullRefresh(); }
       saveLocal();
@@ -3291,8 +3454,12 @@ async function boot(){
   pre.classList.add('hide');
   UI.show('scr-start');
   UI.fullRefresh();
-  SDK.banner(true);   // баннер живёт всю сессию, кроме пауз
-  if (!S.seen.help){ S.seen.help = 1; saveLocal(); setTimeout(()=>UI.openHelp(), 450); }
+  /* правила VK 1.1.4 + 2.1.5: доступ к приложению — только после принятия
+     Пользовательского соглашения и Политики конфиденциальности (0+).
+     Реклама (баннер/медиареклама) включается после согласия и онбординга
+     (правила 5.1.4.2а, 5.1.5.2б). */
+  if (!S.seen.tos) UI.modal('m-consent');
+  else afterConsent();
   /* gameStart после первого кадра */
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     if (!gameStarted){ gameStarted = true; SDK.gameStart(); }
@@ -3302,12 +3469,16 @@ async function boot(){
   setTimeout(()=>{ if (META.freeChestCount() > 0) UI.toast('🎁 ' + L('chestShop') + ': ' + META.freeChestCount(), '📦'); }, 1200);
 }
 window.addEventListener('beforeunload', () => { saveLocal(); SDK.gameStop(); });
+/* правила VK 2.2.5: звук не должен продолжать играть после закрытия/сворачивания */
+document.addEventListener('visibilitychange', () => { if (document.hidden) Audio.suspendAll(); });
 setInterval(() => { try{ saveLocal(); }catch(e){} }, 8000);   // автосейв: VK может закрыть iframe без beforeunload
 document.addEventListener('pointerdown', () => Audio.resume(), {once:true});
 document.addEventListener('keydown', () => Audio.resume(), {once:true});
 
-/* ============================== TEST / DEMO HOOKS ============================== */
-window.__TR = {
+/* ============================== TEST / DEMO HOOKS ==============================
+   Правила VK 4.1.3: в публикуемом приложении не должно быть тестового контента —
+   хуки доступны ТОЛЬКО с ?debug=1 / на localhost, в релизе их нет.            */
+if (DEBUG_HOOKS) window.__TR = {
   get S(){ return S; }, get G(){ return GAME.G; }, GAME, META, UI, SDK, Audio,
   VKB, SDK,
   startLevel:(n, hc=false) => GAME.start(n, {hardcore:hc}),
