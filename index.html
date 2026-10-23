@@ -325,9 +325,10 @@ body.vkb #frame{padding-bottom:calc(env(safe-area-inset-bottom) + 112px)}
       </div>
       <div class="row" id="mapNav" style="width:100%;gap:6px;margin:6px 0 2px"></div>
       <div class="scroll" id="mapScroll"></div>
-      <div class="row" id="mapFoot" style="width:100%;justify-content:center;gap:8px;position:absolute;bottom:12px;left:0;right:0;padding:0 12px;z-index:6">
+      <div class="row" id="mapFoot" style="width:100%;justify-content:center;gap:8px;position:absolute;bottom:12px;left:0;right:0;padding:0 12px;z-index:6;flex-wrap:wrap">
         <button class="pill small alt" id="btnHc"></button>
         <button class="pill small vio" id="btnEraBoost"></button>
+        <button class="pill small grn" id="btnEraFree" style="display:none"></button>
         <button class="pill small grn" id="btnEndless2" data-l="endless"></button>
       </div>
     </div>
@@ -390,8 +391,10 @@ body.vkb #frame{padding-bottom:calc(env(safe-area-inset-bottom) + 112px)}
     <div class="modal hide" id="m-quests"><div class="panel glass">
       <button class="icobtn xbtn" data-close>✕</button>
       <div class="mtitle" data-l="quests"></div>
-      <div class="col" style="gap:10px" id="questBody"></div>
-      <button class="pill grn" id="btnDailyChest"></button>
+      <div class="scroll" style="max-height:64vh"><div class="col" style="gap:10px">
+        <button class="pill grn" id="btnDailyChest"></button>
+        <div class="col" style="gap:10px" id="questBody"></div>
+      </div></div>
     </div></div>
 
     <div class="modal hide" id="m-achv"><div class="panel glass">
@@ -403,10 +406,13 @@ body.vkb #frame{padding-bottom:calc(env(safe-area-inset-bottom) + 112px)}
     <div class="modal hide" id="m-chest"><div class="panel glass">
       <button class="icobtn xbtn" data-close>✕</button>
       <div class="mtitle" id="chestTitle"></div>
+      <div id="chestOdds" style="font-size:12px;opacity:.85;text-align:center;line-height:1.35"></div>
       <div class="rays hide" id="chestRays"></div>
       <div style="display:flex;justify-content:center;position:relative;z-index:1"><img id="chestImg" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" data-img="chest_closed.png" style="width:56%" alt=""></div>
       <div id="chestLoot" class="col" style="gap:8px;min-height:60px;justify-content:center"></div>
       <button class="pill big" id="btnChestOpen" data-l="open"></button>
+      <button class="pill grn" id="btnChestFree" style="display:none"></button>
+      <button class="pill vio small" id="btnChestX2" style="display:none"></button>
     </div></div>
 
     <div class="modal hide" id="m-continue"><div class="panel glass">
@@ -570,7 +576,7 @@ const IMG_DATA = {
 
 'use strict';
 /* ==================== TINY ROCKET / КРОХА-РАКЕТА ==================== */
-const VERSION = '1.9.0';
+const VERSION = '1.9.2';
 /* Контакт поддержки (правила VK 2.4.1/2.4.2). ЗАМЕНИТЕ на реальный e-mail/сообщество! */
 const SUPPORT_CONTACT = 'privacy@example.com';
 /* Отладочный доступ (__TR) — только с ?debug=1, чтобы в релизе не было
@@ -605,7 +611,9 @@ ru: {
   continueQ:'Груз разбит, но маршрут ещё не окончен. Продолжить полёт с целостностью 50%?',
   continueAd:'Смотреть рекламу — продолжить', continueDust:'Продолжить за 150 ✦',
   watchAdFree:'Реклама — бесплатно', orDust:'или 200 ✦',
-  chestShop:'Сундук с грузом', chestDesc:'Шанс редкого и эпического груза!',
+  chestShop:'Сундук с грузом', chestDesc:'Шансы: обычный 70% · редкий 25% · эпический 5%',
+  chestOdds:'Шансы груза:', bossGuarantee:'легендарный гарантирован, если его ещё нет в коллекции',
+  chestFree:'БЕСПЛАТНЫЙ СУНДУК', chestX2:'×2 ПЫЛЬ ЗА ВИДЕО', runX2:'×2 ЗА ВИДЕО', eraFree:'ЭПОХА +1 ЗА ВИДЕО',
   eraBoost:'Эпоха+ · 300 ✦', eraBoostMax:'Все эпохи открыты',
   hardcore:'ХАРДКОР', hardcoreOn:'Хардкор: ВКЛ · ×2',
   hardcoreOff:'Хардкор: ВЫКЛ', hardcoreHint:'1 удар разбивает груз. Награда ×2!',
@@ -619,8 +627,8 @@ ru: {
   tipDelivery:'Доставка груза: +50 ✦ × множитель целостности (×1…×5)',
   tipLevel:'Уровень пройден: +100 ✦', tipBoss:'Босс побеждён: +300 ✦',
   tipCombo:'Комбо: доставка без урона подряд = +10% за каждую, до +50%',
-  tipChest:'Открыть сундук: 200 ✦ или реклама', tipContinue:'Продолжить после разбитого груза: 150 ✦ или реклама',
-  tipEra:'Ускорить эпоху: 300 ✦', tipSkin:'Скины ракеты: 500–2000 ✦',
+  tipChest:'Открыть сундук: 200 ✦ или реклама. Шансы: обычный 70% · редкий 25% · эпический 5%', tipContinue:'Продолжить после разбитого груза: 150 ✦ или реклама (не больше 2 раз за полёт)',
+  tipEra:'Ускорить эпоху: 300 ✦ или 1 бесплатный буст в день за видео', tipSkin:'Скины ракеты: 500–2000 ✦',
   tutHold:'ДЕРЖИ палец или ПРОБЕЛ — тяга вверх!', tutRelease:'Отпусти — ракета падает. Пролети сквозь кольца!',
   tutGoal:'Впереди станция — доставь хрупкий груз!',
   hold:'ДЕРЖИ = ТЯГА ВВЕРХ', cargo:'ГРУЗ',
@@ -691,7 +699,9 @@ en: {
   continueQ:'Cargo is broken, but the route is not over. Continue the flight at 50% integrity?',
   continueAd:'Watch ad — continue', continueDust:'Continue for 150 ✦',
   watchAdFree:'Watch ad — free', orDust:'or 200 ✦',
-  chestShop:'Cargo chest', chestDesc:'Chance of rare & epic cargo!',
+  chestShop:'Cargo chest', chestDesc:'Odds: common 70% · rare 25% · epic 5%',
+  chestOdds:'Cargo odds:', bossGuarantee:'legendary guaranteed if you have none yet',
+  chestFree:'FREE CHEST', chestX2:'×2 DUST FOR VIDEO', runX2:'×2 FOR VIDEO', eraFree:'ERA +1 FOR VIDEO',
   eraBoost:'Era+ · 300 ✦', eraBoostMax:'All eras unlocked',
   hardcore:'HARDCORE', hardcoreOn:'Hardcore: ON · ×2',
   hardcoreOff:'Hardcore: OFF', hardcoreHint:'1 hit breaks the cargo. Reward ×2!',
@@ -705,8 +715,8 @@ en: {
   tipDelivery:'Cargo delivery: +50 ✦ × integrity multiplier (×1…×5)',
   tipLevel:'Level complete: +100 ✦', tipBoss:'Boss defeated: +300 ✦',
   tipCombo:'Combo: undamaged deliveries in a row = +10% each, up to +50%',
-  tipChest:'Open a chest: 200 ✦ or an ad', tipContinue:'Continue after broken cargo: 150 ✦ or an ad',
-  tipEra:'Boost era: 300 ✦', tipSkin:'Rocket skins: 500–2000 ✦',
+  tipChest:'Open a chest: 200 ✦ or an ad. Odds: common 70% · rare 25% · epic 5%', tipContinue:'Continue after broken cargo: 150 ✦ or an ad (up to 2 per flight)',
+  tipEra:'Boost era: 300 ✦, or 1 free boost a day for a video', tipSkin:'Rocket skins: 500–2000 ✦',
   tutHold:'HOLD finger or SPACE — thrust up!', tutRelease:'Release — rocket falls. Fly through rings!',
   tutGoal:'Station ahead — deliver the fragile cargo!',
   hold:'HOLD = THRUST UP', cargo:'CARGO',
@@ -881,7 +891,7 @@ function mulberry(seed){ return function(){ seed|=0; seed=seed+0x6D2B79F5|0; let
 /* ============================== SAVE ============================== */
 const SAVE_KEY = 'tinyrocket.save.v1';
 function defaultSave(){
-  return {v:1, ts:Date.now(), dust:250, stars:{}, unlocked:1, eraBoost:1,
+  return {v:1, ts:Date.now(), dust:250, stars:{}, unlocked:1, eraBoost:1, chestFreeDay:'', eraFreeDay:'',
     endlessBest:0, combo:0, comboBest:0, hc:false,
     skins:{owned:[], eq:null}, cargo:{}, chests:{boss:0, combo:0},
     achv:{}, quests:{day:'', q:{qDeliver:0,qRings:0,qPerfect:0}, claimed:{}, chest:false},
@@ -897,6 +907,19 @@ function defaultSave(){
 let S = defaultSave();
 function loadLocal(){
   try{ const raw = localStorage.getItem(SAVE_KEY); if(raw){ const d=JSON.parse(raw); if(d && d.v===1) S = Object.assign(defaultSave(), d); } }catch(e){}
+  migrateSave();
+}
+/* правка G: миграция/гигиена сейва — СТАРЫЕ данные не роняют игру:
+   новые поля получают дефолты, stars хранится картой только ненулевых,
+   daily.tops не длиннее 5. Вызывается после любого слияния (local/cloud). */
+function migrateSave(){
+  try{
+    if (Array.isArray(S.stars)){ const m = {}; S.stars.forEach((v,i)=>{ if (v>0) m[i]=v; }); S.stars = m; }
+    for (const k in S.stars) if (!S.stars[k]) delete S.stars[k];
+    if (S.daily && Array.isArray(S.daily.tops)) S.daily.tops = S.daily.tops.slice(0,5);
+    if (typeof S.chestFreeDay !== 'string') S.chestFreeDay = '';
+    if (typeof S.eraFreeDay !== 'string') S.eraFreeDay = '';
+  }catch(e){}
 }
 function saveLocal(){ S.ts = Date.now(); try{ localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }catch(e){} SDK.pushCloud(); }
 const setBonus = () => {
@@ -1130,8 +1153,12 @@ const VKB = (() => {
      это нормально). Точки вызова: после открытия рекламного гейта
      (онбординг завершён — правила 5.1.4.2а/б), после каждой полноэкранной
      рекламы (через preloadChecks), по VKWebAppViewRestore и visibilitychange.
-     Баннер никогда не скрывается (HideBannerAd не зовём). */
+     Баннер никогда не скрывается (HideBannerAd не зовём).
+     Правка A: все повторы gated флагом bannerOn — в бою (startLevel/резюме/
+     автопауза) bannerOn=false, sticky не показывается и не повторяется;
+     в меню/карте (exitToMap, гейт после онбординга) bannerOn=true. */
   let gateOpen = false, bannerPending = false;
+  let bannerOn = false;   // правка A: «нужен ли sticky сейчас» — в бою false, в меню/карте true
   function openAdGate(){
     if (gateOpen) return;
     gateOpen = true;
@@ -1156,12 +1183,13 @@ const VKB = (() => {
   }
   function showVkBanner(){
     if (!inVK) return;
+    if (!bannerOn) return;   // правка A: в бою sticky выключен — не показываем и не повторяем после рекламы
     if (!gateOpen){ bannerPending = true; return; }   // до онбординга баннера нет
     bannerPending = false;
     adLog('banner → VKWebAppShowBannerAd {banner_location:bottom}');
     try { send('VKWebAppShowBannerAd', {banner_location:'bottom'}).catch(()=>{}); } catch(e){}
   }
-  const banner = on => { if (on) onReady(showVkBanner); };   // «выкл» = просто не повторять показ
+  const banner = on => { bannerOn = !!on; if (on) onReady(showVkBanner); };   // вкл = показ/повтор, выкл = без повторов (HideBannerAd не зовём — схема релиза)
   const taptic = t => { if (inVK) send('VKWebAppTapticImpactOccurred', {type:t}).catch(()=>{}); };
   return {inject, onReady, lang, save, load, taptic, showInterstitial, showRewarded, checkAds, banner, showVkBanner, openAdGate,
           get gateOpen(){ return gateOpen; },
@@ -1238,6 +1266,7 @@ const SDK = (() => {
   const adsPlaying = () => { try{ return !!(gp && gp.ads && (gp.ads.isFullscreenPlaying || gp.ads.isRewardedPlaying || gp.ads.isPreloaderPlaying)); }catch(e){ return false; } };
   const interstitial = () => {
     const now = performance.now();
+    try { if (GAME.G && (GAME.G.mode === 'play' || GAME.G.mode === 'pause')) return; } catch(e){}   // правка F: никогда в бою/на паузе
     const vkRoute = !has() && VKB.inVK;
     if (vkRoute && !VKB.gateOpen) return;             // до онбординга медиарекламы нет (правила 5.1.5.2б)
     if (now - sessionStart < (vkRoute ? 120000 : 60000)) return;   // запрет первые 60/120 сек сессии
@@ -1298,7 +1327,7 @@ const SDK = (() => {
         const raw = gp.player && gp.player.get ? gp.player.get('save') : null;
         if (raw){
           const cloud = JSON.parse(raw);
-          if (cloud && cloud.v === 1 && (cloud.ts||0) > (S.ts||0)){ S = Object.assign(defaultSave(), cloud); UI.fullRefresh(); }
+          if (cloud && cloud.v === 1 && (cloud.ts||0) > (S.ts||0)){ S = Object.assign(defaultSave(), cloud); migrateSave(); UI.fullRefresh(); }
         }
         pushCloud(true);
       }catch(e){}
@@ -1697,6 +1726,10 @@ const UI = (() => {
     $('btnHc').classList.toggle('red', S.hc);
     $('btnEraBoost').textContent = S.eraBoost >= 5 ? L('eraBoostMax') : L('eraBoost');
     $('btnEraBoost').classList.toggle('gray', S.eraBoost>=5);
+    /* правка H: rewarded «эпоха +1» раз в сутки — рядом с платной кнопкой */
+    const ef = $('btnEraFree');
+    if (ef){ ef.textContent = '🎬 ' + L('eraFree');
+      ef.style.display = (S.eraBoost < 5 && S.eraFreeDay !== todayStr()) ? '' : 'none'; }
     const cur = box.querySelector('.node.cur');
     if (cur) box.scrollTop = Math.max(0, cur.parentElement.offsetTop - box.clientHeight*0.45);
     UI.stars(); UI.dust();
@@ -1837,6 +1870,7 @@ const UI = (() => {
     const dc = $('btnDailyChest');
     dc.textContent = S.quests.chest ? L('dailyGot') : '🎁 ' + L('daily') + ' — ' + L('claim');
     dc.disabled = S.quests.chest;
+    dc.style.display = S.quests.chest ? 'none' : '';   /* v1.9.2: забрали — не мозолит глаза */
     dc.onclick = () => { if (S.quests.chest) return; S.quests.chest = true; saveLocal(); Audio.sfx.click(); openChest('daily'); UI.closeModal('m-quests'); };
     questBadge();
   }
@@ -1977,6 +2011,17 @@ function wireUI(){
       saveLocal(); Audio.sfx.star(); UI.toast(L('eraNames')[S.eraBoost-1] + ' ✓','🌌'); UI.renderMap(); }
     else { Audio.sfx.deny(); UI.toast(L('noDust'),'✦'); }
   };
+  /* правка H: «+1 эпоха-буст за видео» — 1 раз в сутки (S.eraFreeDay) */
+  const bef = $('btnEraFree');
+  if (bef) bef.onclick = () => {
+    if (S.eraBoost >= 5 || S.eraFreeDay === todayStr()) return;
+    rewardedFlow(ok => {
+      if (!ok){ UI.toast(L('adFail'),'📺'); return; }
+      S.eraFreeDay = todayStr();
+      S.eraBoost++; S.unlocked = Math.max(S.unlocked, (S.eraBoost-1)*LEVELS_PER_ERA + 1);
+      saveLocal(); Audio.sfx.star(); UI.toast(L('eraNames')[S.eraBoost-1] + ' ✓','🌌'); UI.renderMap();
+    });
+  };
   /* continue modal */
   const setContLabels = () => { $('btnContAd').textContent = '📺 ' + L('continueAd'); $('btnContDust').textContent = L('continueDust'); };
   setContLabels();
@@ -1986,6 +2031,8 @@ function wireUI(){
   $('btnContNo').onclick = () => { UI.closeModal('m-continue'); GAME.finishFail(); };
   /* chest modal */
   $('btnChestOpen').onclick = () => chestOpenClick();
+  const bcf = $('btnChestFree'); if (bcf) bcf.onclick = () => chestFreeClick();   // правка C1
+  const bcx = $('btnChestX2');   if (bcx) bcx.onclick = () => chestX2Click();     // правка C2
   /* документы + поддержка (доступны из настроек; экрана-согласия нет) */
   $('btnPrivacy').onclick = () => { Audio.sfx.click(); openLegal('privacy'); };
   $('btnTerms').onclick = () => { Audio.sfx.click(); openLegal('terms'); };
@@ -2016,7 +2063,7 @@ const GAME = (() => {
     rocket:{y:600, vy:0, squ:0, inv:0},
     integrity:100, ents:[], sched:[], parts:[], floats:[], shake:0, flash:0,
     rings:0, cans:0, hits:0, boss:null, station:null, phase:'fly',
-    dockT:0, overT:0, auto:false, bossAt:-1, runDust:0, contAsked:false,
+    dockT:0, overT:0, auto:false, bossAt:-1, runDust:0, contAsked:false, x2Given:false, contCount:0,
     bossDefeated:false, gravMul:1, tut:0, hitstop:0, zoom:1, bossIntro:0, dist:0,
     amb:[], ambT:1, mod:null, totRings:0, totCans:0, weakCd:0, daily:false, score:0,
   };
@@ -2136,7 +2183,8 @@ const GAME = (() => {
     if (!G.endless && G.lvl > 1 && (G.lvl-1) % 24 === 0)
       setTimeout(()=>UI.banner('🌌 ' + L('eraNames')[G.era] + ': ' + L('mechNames')[G.era] + '!', 2400), 900);
     UI.show('game');
-    SDK.gameplayStart(); SDK.banner(true);
+    G.x2Given = false; G.contCount = 0;   // правки B/E: per-run флаги (в сейв не попадают)
+    SDK.gameplayStart(); SDK.banner(false);   // правка A: в бою sticky ВЫКЛ (палец не перекрывать)
     Audio.resume(); Audio.music(S.set.music, G.era, G.cfg.speed);
     if (G.hardcore) UI.toast(L('hardcoreHint'), '💀');
     if (G.mod) setTimeout(()=>UI.banner(G.mod.icon + ' ' + L('mod') + ': ' + L('mod'+G.mod.id[0].toUpperCase()+G.mod.id.slice(1)), 2200), 700);
@@ -2152,13 +2200,14 @@ const GAME = (() => {
   }
   function resume(){
     if (G.mode !== 'pause') return;
-    G.mode = 'play'; SDK.gameplayStart(); SDK.banner(true); Audio.resume(); Audio.music(S.set.music, G.era, G.cfg.speed);
+    G.mode = 'play'; SDK.gameplayStart(); SDK.banner(false); Audio.resume(); Audio.music(S.set.music, G.era, G.cfg.speed);   // правка A: после паузы снова бой — sticky выключен
   }
   function exitToMap(inter=true){
     G.mode = 'idle'; G.era = eraOf(Math.min(MAX_LEVEL, S.unlocked));
     SDK.gameplayStop(); Audio.thrust(false); Audio.music(false);
     UI.closeModal('m-pause'); UI.closeModal('m-result'); UI.closeModal('m-continue');
     UI.show((G.endless || G.daily) ? 'scr-start' : 'scr-map');
+    SDK.banner(true);   // правка A: sticky только в меню/карте
     if (inter) SDK.interstitial();
   }
 
@@ -2199,6 +2248,7 @@ const GAME = (() => {
   }
   function doContinue(){
     UI.closeModal('m-continue');
+    G.contCount = (G.contCount|0) + 1;   // правка E: счётчик продолжений за забег (сброс в beginRoute)
     G.integrity = 50; G.mode = 'play';
     G.rocket.inv = 2.5; G.rocket.vy = 0;
     G.ents = G.ents.filter(e => e.type==='ring' || e.type==='can' || e.type==='decor');
@@ -2375,7 +2425,9 @@ const GAME = (() => {
     G.shake = Math.max(0, G.shake - dt*46);
     G.flash = Math.max(0, G.flash - dt*2.4);
     if (G.mode === 'over'){ G.overT += dt; if (G.overT > 1.1 && !G.contAsked){ G.contAsked = true;
-      if (G.daily) META.resultFail(); else UI.modal('m-continue'); } }
+      if (G.daily) META.resultFail();
+      else if ((G.contCount|0) >= 2) finishFail();   // правка E: кап продолжений — не больше 2 за забег (rewarded + пыль суммарно)
+      else UI.modal('m-continue'); } }
     if (G.mode === 'dock'){ G.dockT += dt; if (G.dockT > 1.25){ G.mode = 'result'; META.resultDeliver(); } }
   }
 
@@ -3100,7 +3152,7 @@ const META = (() => {
 
     /* stars & unlock */
     const stars = perfect ? 3 : (integrity >= 50 ? 2 : 1);
-    S.stars[G.lvl] = Math.max(S.stars[G.lvl] || 0, stars);
+    if (stars > 0) S.stars[G.lvl] = Math.max(S.stars[G.lvl] || 0, stars);   // правка G: в сейве только ненулевые звёзды
     if (G.lvl < MAX_LEVEL) S.unlocked = Math.max(S.unlocked, G.lvl + 1);
     S.unlocked = Math.max(S.unlocked, Math.min(MAX_LEVEL, (S.eraBoost-1)*LEVELS_PER_ERA + 1));
     S.stats.eras[eraOf(G.lvl)] = 1;
@@ -3253,6 +3305,29 @@ const META = (() => {
       UI.toast(L('shareCopied'),'📋');
     });
     shb.style.width = '100%';
+    /* правка B: rewarded «×2 за забег» на победе — самая жирная точка аркады.
+       Ровно один раз за забег (G.x2Given, сброс в beginRoute), в хардкоре нет
+       (награды уже ×2), при totalV<=0 нет. Схема вызова — как у continue. */
+    if (win && !G.hardcore && !G.x2Given && totalV > 0){
+      const loc0 = LANG==='ru'?'ru-RU':'en-US';
+      const x2b = mk('pill grn', '🎬 ' + L('runX2') + ' · +' + Math.round(totalV).toLocaleString(loc0) + ' ✦', () => {
+        x2b.disabled = true;
+        rewardedFlow(ok => {
+          if (G.x2Given) return;                 // анти-дабл: награда ровно раз
+          if (!ok){ x2b.disabled = false; UI.toast(L('adFail'),'📺'); return; }
+          G.x2Given = true;
+          const bonus = Math.round(totalV);
+          S.dust += bonus; UI.dust(); saveLocal();
+          Audio.sfx.deliver();
+          const loc = LANG==='ru'?'ru-RU':'en-US';
+          const el = $('resTotal'); if (el) el.textContent = '+' + Math.round(totalV*2).toLocaleString(loc) + ' ✦';
+          UI.toast('🎬 +' + bonus.toLocaleString(loc) + ' ✦', '✦');
+          x2b.remove();
+        });
+      });
+      x2b.style.width = '100%';
+      bb.insertBefore(x2b, rw);   // сразу после «ДАЛЬШЕ», до retry/tomap
+    }
     if (win){
       const d = document.createElement('div'); d.className = 'rrow totalRow';
       d.innerHTML = `<span>${L('total')}</span><b id="resTotal" style="color:#ffd64d">+0 ✦</b>`;
@@ -3271,24 +3346,55 @@ const META = (() => {
   }
 
   /* ---------- chests ---------- */
-  let pendingChest = null;
+  let pendingChest = null, chestCloseT = null, chestX2Sum = 0;
   function openChest(type){
     pendingChest = type;
     $('chestTitle').textContent = L('chestShop') + (type==='boss' ? ' · ' + L('bossNames')[0] : '');
+    /* правка D: реальные шансы СТРОГО из весов CHEST_TABLE (текст следует за кодом) */
+    const w = CHEST_TABLE[type] || CHEST_TABLE.shop;
+    const od = $('chestOdds');
+    if (od) od.textContent = L('chestOdds') + ' ' + L('rarCommon') + ' ' + w[0] + '% · ' + L('rarRare') + ' ' + w[1]
+      + '% · ' + L('rarEpic') + ' ' + w[2] + '% · ' + L('rarLegend') + ' ' + w[3] + '%'
+      + ((type==='boss' && w[3] > 0) ? ' — ' + L('bossGuarantee') : '');
     $('chestImg').src = A2('img/chest_closed.png'); fixDomImgs($('m-chest'));
     $('chestRays').classList.add('hide'); $('chestRays').classList.remove('epic');
     $('chestLoot').innerHTML = '';
     $('btnChestOpen').disabled = false;
     $('btnChestOpen').textContent = L('open');
+    /* правка C1: бесплатный сундук 1/сутки за видео (лимит — S.chestFreeDay) */
+    const fb = $('btnChestFree');
+    if (fb){ fb.textContent = '🎬 ' + L('chestFree'); fb.disabled = false;
+      fb.style.display = (S.chestFreeDay !== todayStr()) ? '' : 'none'; }
+    const xb = $('btnChestX2');
+    if (xb){ xb.style.display = 'none'; xb.disabled = false; }
+    clearTimeout(chestCloseT); chestX2Sum = 0;
     UI.modal('m-chest');
     META.tip('chest');
   }
   function chestOpenClick(){
     if (!pendingChest) return;
-    const type = pendingChest; pendingChest = null;
+    const type = pendingChest;
     $('btnChestOpen').disabled = true;
+    const fb0 = $('btnChestFree'); if (fb0) fb0.style.display = 'none';
     if (type === 'boss' && S.chests.boss > 0) S.chests.boss--;
     else if (type === 'combo' && S.chests.combo > 0) S.chests.combo--;
+    revealChest(type);
+  }
+  /* правка C1: 🎬 FREE — ролл выбранного тира БЕЗ списания ✦, 1 раз в сутки */
+  function chestFreeClick(){
+    if (!pendingChest || S.chestFreeDay === todayStr()) return;
+    const type = pendingChest;
+    const fb = $('btnChestFree'); if (fb) fb.disabled = true;
+    rewardedFlow(ok => {
+      if (!ok){ if (fb) fb.disabled = false; UI.toast(L('adFail'),'📺'); return; }
+      S.chestFreeDay = todayStr(); saveLocal();
+      if (fb) fb.style.display = 'none';
+      $('btnChestOpen').disabled = true;
+      revealChest(type);
+    });
+  }
+  function revealChest(type){
+    pendingChest = null;
     Audio.sfx.chest();
     const cimg = $('chestImg'), rays = $('chestRays');
     cimg.classList.add('shaking');
@@ -3315,8 +3421,39 @@ const META = (() => {
       if (maxRar >= 2){ rays.classList.add('epic'); GAME.confetti(GAME.W/2, GAME.H*0.45, 40); Audio.sfx.boss(); }
       S.stats.chests++; logPts(2);
       checkAchv(); saveLocal(); UI.dust();
-      setTimeout(()=>{ rays.classList.add('hide'); rays.classList.remove('epic'); UI.closeModal('m-chest'); }, 1600);
+      /* правка C2: «×2 лут сундука за видео» — удваиваем пылевую часть награды */
+      chestX2Sum = loot.reduce((a,li)=>a+(li.dust||0),0);
+      const xb = $('btnChestX2');
+      clearTimeout(chestCloseT);
+      if (xb && chestX2Sum > 0){
+        xb.textContent = '🎬 ' + L('chestX2') + ' · +' + chestX2Sum + ' ✦';
+        xb.disabled = false; xb.style.display = '';
+        chestCloseT = setTimeout(closeChestModal, 9000);
+      } else {
+        chestCloseT = setTimeout(closeChestModal, 1600);
+      }
     }, 650);
+  }
+  function chestX2Click(){
+    const xb = $('btnChestX2');
+    if (!xb || xb.disabled || chestX2Sum <= 0) return;
+    xb.disabled = true;
+    rewardedFlow(ok => {
+      if (!ok){ xb.disabled = false; UI.toast(L('adFail'),'📺'); return; }
+      const v = chestX2Sum; chestX2Sum = 0;
+      S.dust += v; UI.dust(); saveLocal();
+      Audio.sfx.deliver();
+      UI.toast('+' + v + ' ✦', '🎬');
+      xb.style.display = 'none';
+      clearTimeout(chestCloseT); chestCloseT = setTimeout(closeChestModal, 1400);
+    });
+  }
+  function closeChestModal(){
+    const rays = $('chestRays');
+    rays.classList.add('hide'); rays.classList.remove('epic');
+    const xb = $('btnChestX2'); if (xb) xb.style.display = 'none';
+    chestX2Sum = 0;
+    UI.closeModal('m-chest');
   }
   function rollChest(type){
     const w = CHEST_TABLE[type] || CHEST_TABLE.shop;
@@ -3365,10 +3502,12 @@ const META = (() => {
   }
 
   return {onLevelStart, statHit, statRing, statCan, tip, resultDeliver, resultFail,
-          openChest, chestOpenClick, rollChest, checkAchv, freeChestCount, dropCargo, saveSoon,
+          openChest, chestOpenClick, chestFreeClick, chestX2Click, rollChest, checkAchv, freeChestCount, dropCargo, saveSoon,
           logPts, logClaim, logClaimable};
 })();
 const chestOpenClick = META.chestOpenClick;
+const chestFreeClick = META.chestFreeClick;
+const chestX2Click = META.chestX2Click;
 const openChest = META.openChest;
 
 /* ============================== BOOT ============================== */
@@ -3387,7 +3526,7 @@ async function boot(){
     if (SDK.has() || !VKB.inVK) return;
     VKB.lang().then(l => { if (l && !S.set.lang && l !== LANG) UI.setLang(l); });   // 3.1.2: язык ВКонтакте, иначе русский
     VKB.load().then(cloud => {
-      if (cloud && cloud.v === 1 && (cloud.ts||0) > (S.ts||0)){ S = Object.assign(defaultSave(), cloud); UI.fullRefresh(); }
+      if (cloud && cloud.v === 1 && (cloud.ts||0) > (S.ts||0)){ S = Object.assign(defaultSave(), cloud); migrateSave(); UI.fullRefresh(); }
       saveLocal();
     });
   });
