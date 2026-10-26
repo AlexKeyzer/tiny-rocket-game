@@ -329,6 +329,7 @@ body.vkb #frame{padding-bottom:calc(env(safe-area-inset-bottom) + 112px)}
         <button class="pill small alt" id="btnHc"></button>
         <button class="pill small vio" id="btnEraBoost"></button>
         <button class="pill small grn" id="btnEraFree" style="display:none"></button>
+        <button class="pill small grn" id="btnBonusChests" style="display:none"></button>
         <button class="pill small grn" id="btnEndless2" data-l="endless"></button>
       </div>
     </div>
@@ -576,9 +577,14 @@ const IMG_DATA = {
 
 'use strict';
 /* ==================== TINY ROCKET / КРОХА-РАКЕТА ==================== */
-const VERSION = '1.9.2';
-/* Контакт поддержки (правила VK 2.4.1/2.4.2). ЗАМЕНИТЕ на реальный e-mail/сообщество! */
-const SUPPORT_CONTACT = 'privacy@example.com';
+const VERSION = '1.9.3';
+/* v1.9.3 (R1): контакт разработчика (правила VK 2.4.1/2.4.2).
+   Если e-mail указан — в документах показывается он; если пуст — направляем
+   в раздел «Поддержка» на странице приложения в VK (валидный канал связи;
+   плейсхолдер-адресов в публикуемом релизе быть не должно). */
+const SUPPORT_CONTACT = '';   // <- опционально: реальный e-mail, напр. 'support@yourdomain.com'
+const SUP_RU = () => SUPPORT_CONTACT || 'раздел «Поддержка» на странице приложения в VK (кнопка «Сообщить о проблеме»)';
+const SUP_EN = () => SUPPORT_CONTACT || 'the Support section on the app page in VK (the "Report a problem" button)';
 /* Отладочный доступ (__TR) — только с ?debug=1, чтобы в релизе не было
    «тестового контента» (правила VK 4.1.3) */
 const DEBUG_HOOKS = /[?&#]debug=1(&|#|$)/.test(location.search + location.hash)
@@ -601,9 +607,9 @@ ru: {
   termsBtn:'Соглашение',
   supportLbl:'Поддержка',
   privacyTitle:'Политика конфиденциальности',
-  privacyText:'Игра «Кроха-Ракета» (возрастная категория 0+) работает полностью на устройстве пользователя, не имеет собственных серверов и не собирает персональные данные самостоятельно.\n\nКакие данные обрабатываются и зачем:\n· идентификатор пользователя ВКонтакте и состояние хранилища платформы (VK Bridge, методы Storage) — исключительно для сохранения и синхронизации игрового прогресса между устройствами;\n· языковые настройки (параметр запуска vk_language) — для выбора языка интерфейса;\n· технические сведения об устройстве (размер экрана, производительность) — для адаптации графики и управления;\n· сведения об игровых сессиях обрабатываются платформой ВКонтакте обезличенно для показа рекламы; разработчик эти данные не получает.\n\nГде хранятся данные: игровой прогресс — в хранилище вашего аккаунта ВКонтакте и локально на вашем устройстве. Разработчик не передаёт данные третьим лицам, кроме платформы ВКонтакте в объёме, необходимом для работы игры.\n\nРеклама показывается средствами платформы ВКонтакте (баннер, ролики между уровнями, вознаграждаемые ролики). Разработчик не получает ваших персональных данных из рекламы.\n\nУдаление данных: прогресс можно полностью сбросить в настройках игры («Сбросить прогресс»). Для удаления данных и по любым вопросам обработки данных напишите на ' + SUPPORT_CONTACT + ' — ответ будет направлен не позднее 7 календарных дней.',
+  privacyText:'Игра «Кроха-Ракета» (возрастная категория 0+) работает полностью на устройстве пользователя, не имеет собственных серверов и не собирает персональные данные самостоятельно.\n\nКакие данные обрабатываются и зачем:\n· идентификатор пользователя ВКонтакте и состояние хранилища платформы (VK Bridge, методы Storage) — исключительно для сохранения и синхронизации игрового прогресса между устройствами;\n· языковые настройки (параметр запуска vk_language) — для выбора языка интерфейса;\n· технические сведения об устройстве (размер экрана, производительность) — для адаптации графики и управления;\n· сведения об игровых сессиях обрабатываются платформой ВКонтакте обезличенно для показа рекламы; разработчик эти данные не получает.\n\nГде хранятся данные: игровой прогресс — в хранилище вашего аккаунта ВКонтакте и локально на вашем устройстве. Разработчик не передаёт данные третьим лицам, кроме платформы ВКонтакте в объёме, необходимом для работы игры.\n\nРеклама показывается средствами платформы ВКонтакте (баннер, ролики между уровнями, вознаграждаемые ролики). Разработчик не получает ваших персональных данных из рекламы.\n\nУдаление данных: прогресс можно полностью сбросить в настройках игры («Сбросить прогресс»). Для удаления данных и по любым вопросам обработки данных обращайтесь: ' + SUP_RU() + ' — ответ будет направлен не позднее 7 календарных дней.',
   termsTitle:'Пользовательское соглашение',
-  termsText:'Принимая настоящее соглашение, вы получаете бесплатную неисключительную лицензию на использование игры «Кроха-Ракета» в пределах платформы ВКонтакте.\n\n· Игра бесплатна. Покупки за реальные деньги в игре отсутствуют.\n· Игровая валюта ✦, скины и предметы зарабатываются только игровым путём, не имеют денежной ценности, не выводятся и не обмениваются на деньги, цифровые или физические ценности.\n· Реклама в игре: баннер внизу экрана, короткие ролики при переходе между уровнями (не чаще одного раза в 3 минуты) и вознаграждаемые ролики. Вознаграждаемый ролик запускается только по вашему нажатию, награда всегда указана на кнопке и выдаётся после просмотра. Отказ от просмотра рекламы не ограничивает прохождение игры: все награды доступны и за ✦ или игровые действия.\n· Уровень, очки и награды начисляются только за активные игровые действия.\n· Запрещаются взлом игры, использование стороннего программного обеспечения и накрутка показателей.\n· Поддержка и связь с разработчиком: ' + SUPPORT_CONTACT + '. Ответ на обращение — не позднее 7 календарных дней.\n\nДоступ к игре может быть ограничен Администрацией ВКонтакте в соответствии с Правилами платформы.',
+  termsText:'Принимая настоящее соглашение, вы получаете бесплатную неисключительную лицензию на использование игры «Кроха-Ракета» в пределах платформы ВКонтакте.\n\n· Игра бесплатна. Покупки за реальные деньги в игре отсутствуют.\n· Игровая валюта ✦, скины и предметы зарабатываются только игровым путём, не имеют денежной ценности, не выводятся и не обмениваются на деньги, цифровые или физические ценности.\n· Реклама в игре: баннер внизу экрана, короткие ролики при переходе между уровнями (не чаще одного раза в 3 минуты) и вознаграждаемые ролики. Вознаграждаемый ролик запускается только по вашему нажатию, награда всегда указана на кнопке и выдаётся после просмотра. Отказ от просмотра рекламы не ограничивает прохождение игры: все награды доступны и за ✦ или игровые действия.\n· Уровень, очки и награды начисляются только за активные игровые действия.\n· Запрещаются взлом игры, использование стороннего программного обеспечения и накрутка показателей.\n· Поддержка и связь с разработчиком: ' + SUP_RU() + '. Ответ на обращение — не позднее 7 календарных дней.\n\nДоступ к игре может быть ограничен Администрацией ВКонтакте в соответствии с Правилами платформы.',
   cargoDelivered:'ГРУЗ ДОСТАВЛЕН!', cargoBroken:'ГРУЗ РАЗБИТ…',
   delivery:'Доставка груза', levelDone:'Уровень пройден', bossDone:'Босс побеждён',
   comboBonus:'Комбо без урона', rings:'Кольца', cans:'Канистры', total:'ИТОГО',
@@ -611,7 +617,7 @@ ru: {
   continueQ:'Груз разбит, но маршрут ещё не окончен. Продолжить полёт с целостностью 50%?',
   continueAd:'Смотреть рекламу — продолжить', continueDust:'Продолжить за 150 ✦',
   watchAdFree:'Реклама — бесплатно', orDust:'или 200 ✦',
-  chestShop:'Сундук с грузом', chestDesc:'Шансы: обычный 70% · редкий 25% · эпический 5%',
+  chestShop:'Сундук с грузом', chestDesc:'Шансы: обычный 70% · редкий 25% · эпический 5%', chestsBtn:'Сундуки', supViaVk:'раздел «Поддержка» на странице приложения в VK',
   chestOdds:'Шансы груза:', bossGuarantee:'легендарный гарантирован, если его ещё нет в коллекции',
   chestFree:'БЕСПЛАТНЫЙ СУНДУК', chestX2:'×2 ПЫЛЬ ЗА ВИДЕО', runX2:'×2 ЗА ВИДЕО', eraFree:'ЭПОХА +1 ЗА ВИДЕО',
   eraBoost:'Эпоха+ · 300 ✦', eraBoostMax:'Все эпохи открыты',
@@ -689,9 +695,9 @@ en: {
   termsBtn:'Agreement',
   supportLbl:'Support',
   privacyTitle:'Privacy Policy',
-  privacyText:'The game "Tiny Rocket" (age rating 0+) runs entirely on the user device, has no own servers and does not collect personal data by itself.\n\nWhat data is processed and why:\n· your VK user id and the platform storage state (VK Bridge Storage methods) — solely to save and sync your game progress between devices;\n· language settings (vk_language launch parameter) — to choose the interface language;\n· technical device info (screen size, performance) — to adapt graphics and controls;\n· game session data is processed by the VK platform in anonymized form for ad serving; the developer does not receive it.\n\nWhere data is stored: game progress — in your VK account storage and locally on your device. The developer does not share data with third parties except the VK platform, to the extent required for the game to work.\n\nAds are served by the VK platform (banner, between-level videos, rewarded videos). The developer receives no personal data from ads.\n\nData deletion: you can fully reset progress in the game settings ("Reset progress"). To delete your data or ask any privacy question, write to ' + SUPPORT_CONTACT + ' — a reply will be sent within 7 calendar days.',
+  privacyText:'The game "Tiny Rocket" (age rating 0+) runs entirely on the user device, has no own servers and does not collect personal data by itself.\n\nWhat data is processed and why:\n· your VK user id and the platform storage state (VK Bridge Storage methods) — solely to save and sync your game progress between devices;\n· language settings (vk_language launch parameter) — to choose the interface language;\n· technical device info (screen size, performance) — to adapt graphics and controls;\n· game session data is processed by the VK platform in anonymized form for ad serving; the developer does not receive it.\n\nWhere data is stored: game progress — in your VK account storage and locally on your device. The developer does not share data with third parties except the VK platform, to the extent required for the game to work.\n\nAds are served by the VK platform (banner, between-level videos, rewarded videos). The developer receives no personal data from ads.\n\nData deletion: you can fully reset progress in the game settings ("Reset progress"). To delete your data or ask any privacy question, contact us via ' + SUP_EN() + ' — a reply will be sent within 7 calendar days.',
   termsTitle:'User Agreement',
-  termsText:'By accepting this agreement you receive a free non-exclusive license to use the game "Tiny Rocket" within the VK platform.\n\n· The game is free. There are no real-money purchases.\n· The ✦ currency, skins and items are earned only through gameplay, have no monetary value, cannot be withdrawn or exchanged for money, digital or physical goods.\n· Ads in the game: a banner at the bottom, short videos between levels (no more than once per 3 minutes) and rewarded videos. A rewarded video starts only on your tap, the reward is always shown on the button and is granted after watching. Refusing to watch ads does not limit the game: all rewards are also available for ✦ or gameplay.\n· Levels, scores and rewards are granted only for active gameplay actions.\n· Hacking the game, using third-party software and score boosting are prohibited.\n· Support and developer contact: ' + SUPPORT_CONTACT + '. Replies are sent within 7 calendar days.\n\nAccess to the game may be limited by the VK administration in accordance with the Platform Rules.',
+  termsText:'By accepting this agreement you receive a free non-exclusive license to use the game "Tiny Rocket" within the VK platform.\n\n· The game is free. There are no real-money purchases.\n· The ✦ currency, skins and items are earned only through gameplay, have no monetary value, cannot be withdrawn or exchanged for money, digital or physical goods.\n· Ads in the game: a banner at the bottom, short videos between levels (no more than once per 3 minutes) and rewarded videos. A rewarded video starts only on your tap, the reward is always shown on the button and is granted after watching. Refusing to watch ads does not limit the game: all rewards are also available for ✦ or gameplay.\n· Levels, scores and rewards are granted only for active gameplay actions.\n· Hacking the game, using third-party software and score boosting are prohibited.\n· Support and developer contact: ' + SUP_EN() + '. Replies are sent within 7 calendar days.\n\nAccess to the game may be limited by the VK administration in accordance with the Platform Rules.',
   cargoDelivered:'CARGO DELIVERED!', cargoBroken:'CARGO BROKEN…',
   delivery:'Cargo delivery', levelDone:'Level complete', bossDone:'Boss defeated',
   comboBonus:'No-damage combo', rings:'Rings', cans:'Fuel cans', total:'TOTAL',
@@ -699,7 +705,7 @@ en: {
   continueQ:'Cargo is broken, but the route is not over. Continue the flight at 50% integrity?',
   continueAd:'Watch ad — continue', continueDust:'Continue for 150 ✦',
   watchAdFree:'Watch ad — free', orDust:'or 200 ✦',
-  chestShop:'Cargo chest', chestDesc:'Odds: common 70% · rare 25% · epic 5%',
+  chestShop:'Cargo chest', chestDesc:'Odds: common 70% · rare 25% · epic 5%', chestsBtn:'Chests', supViaVk:'the Support section on the app page in VK',
   chestOdds:'Cargo odds:', bossGuarantee:'legendary guaranteed if you have none yet',
   chestFree:'FREE CHEST', chestX2:'×2 DUST FOR VIDEO', runX2:'×2 FOR VIDEO', eraFree:'ERA +1 FOR VIDEO',
   eraBoost:'Era+ · 300 ✦', eraBoostMax:'All eras unlocked',
@@ -958,7 +964,7 @@ function dailyTick(){
      БЕЗ CheckBannerAd / banner_align / ретраев / скрытия; повторяется после
      каждой полноэкранной рекламы и при возврате в игру;
    · язык из vk_language, сохранения чанками.                                   */
-const adLog = m => { try { console.log('[AD]', m); } catch(e){} };
+const adLog = m => { if (!DEBUG_HOOKS) return; try { console.log('[AD]', m); } catch(e){} };   // v1.9.3 (R4): консоль только при ?debug=1/localhost
 const VKB = (() => {
   let send = () => Promise.reject(new Error('no vkbridge'));
   let inVK = false, bridgeLoaded = false, ready = false;
@@ -1191,7 +1197,10 @@ const VKB = (() => {
   }
   const banner = on => { bannerOn = !!on; if (on) onReady(showVkBanner); };   // вкл = показ/повтор, выкл = без повторов (HideBannerAd не зовём — схема релиза)
   const taptic = t => { if (inVK) send('VKWebAppTapticImpactOccurred', {type:t}).catch(()=>{}); };
-  return {inject, onReady, lang, save, load, taptic, showInterstitial, showRewarded, checkAds, banner, showVkBanner, openAdGate,
+  /* v1.9.3 (R4): жест «свайп назад» — выключаем в бою (случайный выход из игры),
+     возвращаем в меню/карте. Метод VKWebAppEnableSwipeBack, только внутри VK. */
+  const setSwipe = on => { if (!inVK) return; try { send('VKWebAppEnableSwipeBack', {enabled: !!on}).catch(()=>{}); } catch(e){} };
+  return {inject, onReady, lang, save, load, taptic, setSwipe, showInterstitial, showRewarded, checkAds, banner, showVkBanner, openAdGate,
           get gateOpen(){ return gateOpen; },
           get inVK(){ return inVK; }, get bridgeLoaded(){ return bridgeLoaded; }};
 })();
@@ -1281,6 +1290,8 @@ const SDK = (() => {
     if (gp){ on ? (call('ads','showSticky') ?? call('advertisement','sticky')) : (call('ads','closeSticky') ?? call('advertisement','closeSticky')); }
     else VKB.banner(on);
   }); };
+  /* v1.9.3 (R4): свайп-назад — только VK (web/GamePush — no-op) */
+  const swipe = on => { onReady(() => { if (!gp) VKB.setSwipe(on); }); };
   const rewarded = tag => new Promise(res => {
     let done = false; const fin = v => { if(!done){ done=true; res(v); } };
     onReady(() => {
@@ -1351,7 +1362,7 @@ const SDK = (() => {
   }
 
   return {inject, onReady, has, lang, gameStart, gameStop, gameplayStart, gameplayStop,
-          preloadAd, interstitial, rewarded, prerollCheck, banner, soundToggle, pushCloud, adsPlaying,
+          preloadAd, interstitial, rewarded, prerollCheck, banner, swipe, soundToggle, pushCloud, adsPlaying,
           get gp(){ return gp; }, get ready(){ return ready; }};
 })();
 
@@ -1730,6 +1741,12 @@ const UI = (() => {
     const ef = $('btnEraFree');
     if (ef){ ef.textContent = '🎬 ' + L('eraFree');
       ef.style.display = (S.eraBoost < 5 && S.eraFreeDay !== todayStr()) ? '' : 'none'; }
+    /* v1.9.3 (R3): босс-/комбо-сундуки — реальная точка входа на карте
+       (раньше счётчики росли, но открыть их было негде — «мёртвая валюта») */
+    const bc = $('btnBonusChests');
+    if (bc){ const nc = (S.chests.boss||0) + (S.chests.combo||0);
+      bc.textContent = '🎁 ' + L('chestsBtn') + ': ' + nc;
+      bc.style.display = nc > 0 ? '' : 'none'; }
     const cur = box.querySelector('.node.cur');
     if (cur) box.scrollTop = Math.max(0, cur.parentElement.offsetTop - box.clientHeight*0.45);
     UI.stars(); UI.dust();
@@ -1863,7 +1880,7 @@ const UI = (() => {
       const b = document.createElement('button'); b.className = 'pill small ' + (claimed?'gray':'grn');
       b.textContent = claimed ? L('claimed') : (done ? L('claim') : '…');
       b.disabled = claimed || !done;
-      b.onclick = () => { S.week.claimed[qd.id] = true; S.chests.combo++; saveLocal(); Audio.sfx.star(); UI.toast('🎁 ' + L('chestShop'), '📦'); openQuests(); };
+      b.onclick = () => { S.week.claimed[qd.id] = true; S.chests.combo++; saveLocal(); Audio.sfx.star(); UI.toast('🎁 ' + L('chestShop'), '📦'); renderMap(); openQuests(); };   /* v1.9.3 (R3): +сундук → обновить карту */
       r.appendChild(b); wk.appendChild(r);
     });
     body.appendChild(wk);
@@ -2022,6 +2039,14 @@ function wireUI(){
       saveLocal(); Audio.sfx.star(); UI.toast(L('eraNames')[S.eraBoost-1] + ' ✓','🌌'); UI.renderMap();
     });
   };
+  /* v1.9.3 (R3): открытие заработанных сундуков — сначала босс, затем комбо.
+     Списание счётчика и лут — существующий проверенный тракт chestOpenClick/revealChest. */
+  const bbc = $('btnBonusChests');
+  if (bbc) bbc.onclick = () => {
+    if ((S.chests.boss||0) <= 0 && (S.chests.combo||0) <= 0) return;
+    Audio.sfx.click();
+    openChest(S.chests.boss > 0 ? 'boss' : 'combo');
+  };
   /* continue modal */
   const setContLabels = () => { $('btnContAd').textContent = '📺 ' + L('continueAd'); $('btnContDust').textContent = L('continueDust'); };
   setContLabels();
@@ -2036,7 +2061,9 @@ function wireUI(){
   /* документы + поддержка (доступны из настроек; экрана-согласия нет) */
   $('btnPrivacy').onclick = () => { Audio.sfx.click(); openLegal('privacy'); };
   $('btnTerms').onclick = () => { Audio.sfx.click(); openLegal('terms'); };
-  const sv = $('supportVal'); if (sv) sv.textContent = SUPPORT_CONTACT;
+  const sv = $('supportVal');   /* v1.9.3 (R1): e-mail либо «Поддержка» в VK */
+  if (sv){ if (SUPPORT_CONTACT) sv.textContent = SUPPORT_CONTACT;
+    else { sv.setAttribute('data-l','supViaVk'); sv.textContent = L('supViaVk'); } }
 }
 
 /* rewarded helper: кнопка активна и без SDK (фолбэк выдаёт награду) */
@@ -2184,7 +2211,7 @@ const GAME = (() => {
       setTimeout(()=>UI.banner('🌌 ' + L('eraNames')[G.era] + ': ' + L('mechNames')[G.era] + '!', 2400), 900);
     UI.show('game');
     G.x2Given = false; G.contCount = 0;   // правки B/E: per-run флаги (в сейв не попадают)
-    SDK.gameplayStart(); SDK.banner(false);   // правка A: в бою sticky ВЫКЛ (палец не перекрывать)
+    SDK.gameplayStart(); SDK.banner(false); SDK.swipe(false);   // правка A + v1.9.3 (R4): в бою sticky ВЫКЛ, свайп-назад запрещён
     Audio.resume(); Audio.music(S.set.music, G.era, G.cfg.speed);
     if (G.hardcore) UI.toast(L('hardcoreHint'), '💀');
     if (G.mod) setTimeout(()=>UI.banner(G.mod.icon + ' ' + L('mod') + ': ' + L('mod'+G.mod.id[0].toUpperCase()+G.mod.id.slice(1)), 2200), 700);
@@ -2200,14 +2227,14 @@ const GAME = (() => {
   }
   function resume(){
     if (G.mode !== 'pause') return;
-    G.mode = 'play'; SDK.gameplayStart(); SDK.banner(false); Audio.resume(); Audio.music(S.set.music, G.era, G.cfg.speed);   // правка A: после паузы снова бой — sticky выключен
+    G.mode = 'play'; SDK.gameplayStart(); SDK.banner(false); SDK.swipe(false); Audio.resume(); Audio.music(S.set.music, G.era, G.cfg.speed);   // правка A + v1.9.3 (R4): после паузы снова бой
   }
   function exitToMap(inter=true){
     G.mode = 'idle'; G.era = eraOf(Math.min(MAX_LEVEL, S.unlocked));
     SDK.gameplayStop(); Audio.thrust(false); Audio.music(false);
     UI.closeModal('m-pause'); UI.closeModal('m-result'); UI.closeModal('m-continue');
     UI.show((G.endless || G.daily) ? 'scr-start' : 'scr-map');
-    SDK.banner(true);   // правка A: sticky только в меню/карте
+    SDK.banner(true); SDK.swipe(true);   // правка A + v1.9.3 (R4): sticky в меню/карте, свайп-назад снова разрешён
     if (inter) SDK.interstitial();
   }
 
@@ -3454,6 +3481,7 @@ const META = (() => {
     const xb = $('btnChestX2'); if (xb) xb.style.display = 'none';
     chestX2Sum = 0;
     UI.closeModal('m-chest');
+    try { UI.renderMap(); } catch(e){}   /* v1.9.3 (R3): обновить счётчик сундуков на карте */
   }
   function rollChest(type){
     const w = CHEST_TABLE[type] || CHEST_TABLE.shop;
@@ -3486,7 +3514,7 @@ const META = (() => {
       else if (st % 5 === 0){ S.chests.combo++; UI.toast('🎁 ' + L('chestShop'), '📦'); }
       else { const v = addDust(60 + st*15); UI.toast('+' + v + ' ✦', '✦'); }
     }
-    if (got){ Audio.sfx.star(); saveLocal(); }
+    if (got){ Audio.sfx.star(); saveLocal(); try{ UI.renderMap(); }catch(e){} /* v1.9.3 (R3) */ }
     UI.logBadge();
     return got;
   }
