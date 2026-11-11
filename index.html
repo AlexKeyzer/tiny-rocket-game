@@ -377,6 +377,7 @@ body.vkb #frame{padding-bottom:calc(env(safe-area-inset-bottom) + 112px)}
         <div class="row" style="justify-content:space-between"><span data-l="bigHud"></span><div class="sw" id="swBig"></div></div>
         <div class="row" style="justify-content:space-between"><span data-l="sdk"></span><b id="sdkState">—</b></div>
         <div class="row" style="justify-content:space-between"><span data-l="syncLbl"></span><b id="syncVal" style="font-size:11.5px">—</b></div>
+        <button class="pill alt small" id="btnSyncNow" data-l="syncBtn" style="display:none"></button>
         <div class="row" style="justify-content:space-between"><span data-l="supportLbl"></span><b id="supportVal" style="font-size:11.5px;word-break:break-all">—</b></div>
         <div class="row" style="gap:8px">
           <button class="pill alt small" style="flex:1" id="btnPrivacy" data-l="privacyBtn"></button>
@@ -588,7 +589,7 @@ const IMG_DATA = {
 
 'use strict';
 /* ==================== TINY ROCKET / КРОХА-РАКЕТА ==================== */
-const VERSION = '1.9.4';
+const VERSION = '2.0.0';
 /* v1.9.3 (R1): контакт разработчика (правила VK 2.4.1/2.4.2).
    Если e-mail указан — в документах показывается он; если пуст — направляем
    в раздел «Поддержка» на странице приложения в VK (валидный канал связи;
@@ -615,6 +616,8 @@ ru: {
   sound:'Звуки', music:'Музыка', language:'Язык', sdk:'SDK', reset:'Сбросить прогресс',
   syncLbl:'Синхронизация прогресса', syncVk:'облако VK ☁️ (все устройства)', syncWeb:'это устройство (вне VK)',
   syncLoaded:'Прогресс загружен из облака VK ☁️',
+  syncWait:'синхронизация…', syncErr:'нет связи с облаком', syncDone:'сохранено в VK ☁️',
+  syncBtn:'Синхронизировать сейчас', syncOk2:'Прогресс синхронизирован с облаком VK ☁️',
   resetQ:'Точно сбросить ВЕСЬ прогресс?',
   privacyBtn:'Политика конфиденциальности',
   termsBtn:'Соглашение',
@@ -704,6 +707,8 @@ en: {
   next:'NEXT ›', retry:'RETRY', yes:'YES', no:'NO', open:'OPEN',
   sound:'Sound FX', music:'Music', language:'Language', sdk:'SDK', reset:'Reset progress',
   syncLbl:'Progress sync', syncVk:'VK cloud ☁️ (all devices)', syncWeb:'this device only (outside VK)',
+  syncWait:'syncing…', syncErr:'cloud unreachable', syncDone:'saved to VK ☁️',
+  syncBtn:'Sync now', syncOk2:'Progress synced with the VK cloud ☁️',
   syncLoaded:'Progress loaded from VK cloud ☁️',
   resetQ:'Reset ALL progress for sure?',
   privacyBtn:'Privacy Policy',
@@ -912,7 +917,11 @@ function mulberry(seed){ return function(){ seed|=0; seed=seed+0x6D2B79F5|0; let
 /* ============================== SAVE ============================== */
 const SAVE_KEY = 'tinyrocket.save.v1';
 function defaultSave(){
-  return {v:1, ts:Date.now(), dust:250, stars:{}, unlocked:1, eraBoost:1, chestFreeDay:'', eraFreeDay:'',
+  /* v2.0.0 (SYNC-FIX #1): ts = 0 для НОВОГО сейва.
+     Раньше здесь было ts:Date.now(), из-за чего пустой сейв с нового устройства
+     выглядел «свежее» облачного и ЗАТИРАЛ прогресс игрока в VK Storage.
+     Реальная метка времени ставится только в saveLocal() при наличии прогресса. */
+  return {v:1, ts:0, dust:250, stars:{}, unlocked:1, eraBoost:1, chestFreeDay:'', eraFreeDay:'',
     endlessBest:0, combo:0, comboBest:0, hc:false,
     skins:{owned:[], eq:null}, cargo:{}, chests:{boss:0, combo:0},
     achv:{}, quests:{day:'', q:{qDeliver:0,qRings:0,qPerfect:0}, claimed:{}, chest:false},
@@ -948,11 +957,81 @@ function migrateSave(){
 let BOOT_TS = 0;   /* v1.9.4: ts локального сейва ДО стартовых правок (dailyTick, preloader).
                       На старте сравниваем облако с ним: иначе стартовые правки, сами
                       поднимающие S.ts, «побеждали» бы более свежий облачный сейв. */
+/* v2.0.0 (SYNC-FIX #2): «объём» прогресса. Отличает ПУСТОЙ сейв нового
+   устройства от реального — чтобы пустой никогда не затирал облачный.        */
+function progressScore(s){
+  if (!s || s.v !== 1) return 0;
+  let n = 0;
+  try{
+    const st = s.stats || {};
+    n += (s.unlocked || 1) * 10;
+    for (const k in (s.stars||{})) n += (s.stars[k]||0) * 5;
+    n += Math.max(0, (s.dust||0) - 250);
+    n += (s.endlessBest||0) / 10;
+    for (const k in (s.cargo||{})) n += 50;
+    for (const k in (s.achv||{}))  n += 40;
+    n += ((s.skins && s.skins.owned) || []).length * 30;
+    n += (st.deliv||0)*8 + (st.legs||0)*3 + (st.rings||0)*0.2 + (st.days||0)*10 + (st.chests||0)*5;
+    n += (st.dist||0)/1000 + (st.perfect||0)*4 + (st.streak||0)*10;
+  }catch(e){}
+  return Math.round(n);
+}
+function stableJSON(o){
+  if (o === null || typeof o !== 'object') return JSON.stringify(o);
+  if (Array.isArray(o)) return '[' + o.map(stableJSON).join(',') + ']';
+  return '{' + Object.keys(o).sort().map(k => JSON.stringify(k) + ':' + stableJSON(o[k])).join(',') + '}';
+}
+/* строки/флаги, где важен «более свежий» сейв, а не максимум */
+const PREFER_NEWER = /(^|\.)(day|lastDay|id|lang|eq)$/;
+/* Глубокое слияние «по максимуму»: прогресс НИКОГДА не теряется,
+   даже если игрок играл на двух устройствах офлайн и вернулся.            */
+function unionMerge(a, b){
+  const aNewer = (a.ts||0) >= (b.ts||0);
+  const out  = JSON.parse(JSON.stringify(aNewer ? a : b));   // база — более свежий сейв
+  const other = aNewer ? b : a;
+  (function walk(dst, src, path){
+    for (const k in src){
+      if (!Object.prototype.hasOwnProperty.call(src, k)) continue;
+      const sv = src[k], dv = dst[k];
+      if (sv && typeof sv === 'object' && !Array.isArray(sv)){
+        if (!dv || typeof dv !== 'object' || Array.isArray(dv)) dst[k] = JSON.parse(JSON.stringify(sv));
+        else walk(dst[k], sv, path + k + '.');
+      } else if (Array.isArray(sv)){
+        if (path === 'daily.' && k === 'tops'){
+          const m = {}; (dst[k]||[]).concat(sv).forEach(v => { m[v] = +v; });
+          dst[k] = Object.keys(m).map(Number).sort((x,y)=>y-x).slice(0,5);
+        } else if (path === 'set.' || PREFER_NEWER.test(path + k)){
+          if (dv === undefined) dst[k] = sv.slice();
+        } else {
+          dst[k] = Array.from(new Set((dst[k]||[]).concat(sv)));
+        }
+      } else if (typeof sv === 'number'){
+        dst[k] = Math.max(typeof dv === 'number' ? dv : 0, sv);
+      } else if (typeof sv === 'boolean'){
+        if (path === 'set.' || PREFER_NEWER.test(path + k)){ if (dv === undefined) dst[k] = sv; }
+        else dst[k] = !!(dv || sv);
+      } else if (typeof sv === 'string'){
+        if (PREFER_NEWER.test(path + k)){ if (dv === undefined || dv === '') dst[k] = sv; }
+        else if (sv > (dv || '')) dst[k] = sv;
+      } else if (dv === undefined){
+        dst[k] = sv;
+      }
+    }
+  })(out, other, '');
+  return out;
+}
+function adoptSave(obj){ S = Object.assign(defaultSave(), obj); migrateSave(); try{ UI.fullRefresh(); }catch(e){} }
+/* ЕДИНАЯ точка слияния облачного сейва (VK Storage / GamePush player).
+   base сохранён в сигнатуре для совместимости со старыми вызовами. */
 function mergeCloud(cloud, base){
-  const b = (base === undefined) ? (S.ts||0) : (base||0);
-  if (cloud && cloud.v === 1 && (cloud.ts||0) > b){
-    S = Object.assign(defaultSave(), cloud); migrateSave(); UI.fullRefresh(); return true;
-  }
+  if (!cloud || cloud.v !== 1) return false;
+  const lScore = progressScore(S), cScore = progressScore(cloud);
+  const localEmpty = (S.ts||0) === 0 && lScore === 0;
+  if (localEmpty && cScore > 0){ adoptSave(cloud); return true; }   // первый запуск на новом устройстве
+  if (cScore === 0 && lScore === 0) return false;
+  const merged = unionMerge(S, cloud);
+  merged.ts = Math.max(S.ts||0, cloud.ts||0);
+  if (stableJSON(merged) !== stableJSON(S)){ adoptSave(merged); return true; }
   return false;
 }
 function saveLocal(){ S.ts = Date.now(); try{ localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }catch(e){} SDK.pushCloud(); }
@@ -1153,30 +1232,130 @@ const VKB = (() => {
       });
     });
   }
-  /* --- сохранения чанками --- */
-  const CHUNK = 3500;
+  /* --- VK Storage: надёжный транспорт сохранений (v2.0.0, SYNC-FIX #3) ---
+     Что ломало синхронизацию раньше:
+       · запись начиналась с VKWebAppStorageGetKeys — любой отказ этого
+         ВСПОМОГАТЕЛЬНОГО вызова молча отменял всю запись (catch → false);
+       · чанки склеивались в порядке ответа VK, а VK порядок НЕ гарантирует →
+         JSON рвался, облако читалось как null;
+       · на каждое сохранение уходило 2+ вызова каждые 8 с ≈ 900 вызовов/час
+         при лимите VK 1000/час — лимит исчерпывался, сохранения вставали.
+     Стало:
+       · счётчик чанков лежит внутри trc0 → запись = 1 вызов, чтение = 1 вызов;
+       · сборка строго по индексу из имени ключа (порядок ответа не важен);
+       · запись без предварительных чтений, с проверкой ответа и ретраем;
+       · троттлинг и почасовой бюджет — см. SDK.pushCloud;
+       · старые ключи trsave* подхватываются один раз, прогресс не теряется. */
+  const CKEY = i => 'trc' + i;
+  const CHUNK = 2000;                    // < 2236 (реальная граница JSON в VK) и < 4096
+  let lastWritten = null;                // последний успшно ушедший в облако payload
+  const vkSet = (k, v) => withTimeout(
+    send('VKWebAppStorageSet', {key:k, value:v})
+      .then(r => !!(r && r.result !== false)).catch(()=>false), 12000, false);
+  const vkGet = keys => withTimeout(
+    send('VKWebAppStorageGet', {keys})
+      .then(r => (r && r.keys) || []).catch(()=>[]), 12000, []);
+  const retry = (fn, tries) => new Promise(res => {
+    let i = 0;
+    const step = () => fn().then(ok => {
+      if (ok || ++i >= tries) return res(!!ok);
+      setTimeout(step, [1500, 6000, 15000][i-1] || 15000);
+    }, () => {
+      if (++i >= tries) return res(false);
+      setTimeout(step, [1500, 6000, 15000][i-1] || 15000);
+    });
+    step();
+  });
+  /* Компактная упаковка карты звёзд {"1":3,"2":0,...} → "1:30...".
+     Экономит ~700 символов: сейв со 100 % прогресса (120 уровней) остаётся в
+     ОДНОМ ключе VK Storage → ровно 1 вызов на запись вместо двух.           */
+  function packSave(o){
+    try{
+      const st = o && o.stars;
+      if (st && typeof st === 'object' && !Array.isArray(st)){
+        const ks = Object.keys(st).map(Number).filter(n => Number.isFinite(n)).sort((a,b)=>a-b);
+        if (ks.length && ks[ks.length-1] - ks[0] < 5000){
+          const min = ks[0], max = ks[ks.length-1];
+          let d = '';
+          for (let i=min;i<=max;i++) d += Math.min(9, Math.max(0, (st[i]|0) || (st[String(i)]|0)));
+          o = Object.assign({}, o, {stars: min + ':' + d});
+        }
+      }
+    }catch(e){}
+    return o;
+  }
+  function unpackSave(o){
+    try{
+      const st = o && o.stars;
+      if (typeof st === 'string'){
+        const c = st.indexOf(':');
+        if (c > 0 && /^\d+:\d*$/.test(st)){
+          const min = +st.slice(0, c), d = st.slice(c+1), m = {};
+          for (let i=0;i<d.length;i++){ const v = +d[i]; if (v > 0) m[min + i] = v; }
+          o = Object.assign({}, o, {stars: m});
+        }
+      } else if (Array.isArray(st)){
+        const m = {}; st.forEach((v,i) => { if (v > 0) m[i] = v; });
+        o = Object.assign({}, o, {stars: m});
+      }
+    }catch(e){}
+    return o;
+  }
+  const parseSave = s => {
+    if (!s) return null;
+    try { const o = unpackSave(JSON.parse(s)); return (o && o.v === 1) ? o : null; } catch(e){ return null; }
+  };
+  /* однократная миграция со старых ключей trsaveN (сборка по индексу!).
+     Флаг в localStorage: проверяем старый формат не больше одного раза на
+     устройство — иначе каждый запуск тратил бы лишний вызов VK Storage.     */
+  const LEGACY_FLAG = 'tinyrocket.legacy.v2';
+  function loadLegacy(){
+    try{ if (localStorage.getItem(LEGACY_FLAG)) return Promise.resolve(null); }catch(e){}
+    return withTimeout(send('VKWebAppStorageGetKeys', {count: 1000, offset: 0}), 8000, {keys:[]})
+      .then(r => {
+        try{ localStorage.setItem(LEGACY_FLAG, '1'); }catch(e){}
+        const idx = (r.keys||[]).filter(k => /^trsave\d+$/.test(k)).map(k => +k.slice(6)).sort((a,b)=>a-b);
+        if (!idx.length) return null;
+        return vkGet(idx.map(i => 'trsave' + i)).then(rows => {
+          const map = {};
+          rows.forEach(rw => { const m = /^trsave(\d+)$/.exec(rw.key); if (m) map[+m[1]] = rw.value || ''; });
+          let out = ''; idx.forEach(i => { out += (map[i] || ''); });
+          return parseSave(out);
+        });
+      }).catch(()=>null);
+  }
   function save(str){
     if (!inVK) return Promise.resolve(false);
+    let body = str;
+    try { body = JSON.stringify(packSave(JSON.parse(str))); } catch(e){ body = str; }
     const parts = [];
-    for (let i=0; i<str.length; i+=CHUNK) parts.push(str.slice(i, i+CHUNK));
-    return send('VKWebAppStorageGetKeys', {count: 1000}).then(keys => {
-      const old = (keys.keys||[]).filter(k => /^trsave\d+$/.test(k) && +k.slice(6) >= parts.length);
-      const chain = parts.map((p,i) => () => send('VKWebAppStorageSet', {key:'trsave'+i, value:p}));
-      old.forEach(k => chain.push(() => send('VKWebAppStorageSet', {key:k, value:''}).catch(()=>{})));
-      let seq = Promise.resolve();
-      chain.forEach(f => { seq = seq.then(f).catch(()=>{}); });
-      return seq.then(()=>true);
-    }).catch(()=>false);
+    for (let i=0; i<body.length; i+=CHUNK) parts.push(body.slice(i, i+CHUNK));
+    if (!parts.length) parts.push('');
+    const n = parts.length;
+    let seq = Promise.resolve(true);
+    parts.forEach((p, i) => {
+      const body = (i === 0) ? (n + '|' + p) : p;
+      seq = seq.then(ok => ok ? retry(() => vkSet(CKEY(i), body), 3) : false);
+    });
+    return seq.then(ok => { if (ok) lastWritten = str; return ok; }).catch(()=>false);
   }
   function load(){
     if (!inVK) return Promise.resolve(null);
-    return send('VKWebAppStorageGetKeys', {count: 1000}).then(keys => {
-      const idx = (keys.keys||[]).filter(k => /^trsave\d+$/.test(k)).map(k=>+k.slice(6)).sort((a,b)=>a-b);
-      if (!idx.length) return null;
-      return send('VKWebAppStorageGet', {keys: idx.map(i=>'trsave'+i)}).then(r => {
-        let out = '';
-        (r.keys||[]).forEach(k => { if (k.value) out += k.value; });
-        try { return JSON.parse(out); } catch(e){ return null; }
+    return vkGet([CKEY(0)]).then(rows => {
+      let head = '';
+      rows.forEach(r => { if (r.key === CKEY(0)) head = r.value || ''; });
+      if (!head) return loadLegacy();
+      const bar = head.indexOf('|');
+      if (bar < 0) return parseSave(head);
+      const n = parseInt(head.slice(0, bar), 10);
+      if (!(n >= 1)) return parseSave(head.slice(bar + 1));
+      if (n === 1)  return parseSave(head.slice(bar + 1));
+      const keys = []; for (let i=1;i<n;i++) keys.push(CKEY(i));
+      return vkGet(keys).then(rest => {
+        const map = {0: head.slice(bar + 1)};
+        rest.forEach(r => { const m = /^trc(\d+)$/.exec(r.key); if (m) map[+m[1]] = r.value || ''; });
+        let out = ''; for (let i=0;i<n;i++) out += (map[i] || '');
+        return parseSave(out);
       });
     }).catch(()=>null);
   }
@@ -1239,11 +1418,24 @@ const VKB = (() => {
 const SDK = (() => {
   let gp = null, ready = false, cloudTimer = 0, sessionStart = performance.now();
   let lastInter = -1e9;
-  /* v1.9.4 (замечание модерации #3): флаг «первичное чтение облака завершено».
-     Пока он не поднят, pushCloud запрещён: иначе локальный сейв (dailyTick при
-     старте, автосейв по таймеру) мог перезаписать более свежий облачный сейв
-     с другого устройства ДО того, как облако будет прочитано и слито. */
+  /* v2.0.0 (SYNC-FIX #4): машина состояний облака + бюджет вызовов VK Storage.
+     'pending' — облако ещё не прочитано: ПИСАТЬ В НЕГО ЗАПРЕЩЕНО, иначе локальный
+                (возможно пустой или устаревший) сейв затрёт прогресс игрока;
+     'unknown' — прочитать не удалось вовремя: пишем, только если локальный сейв
+                реально содержит прогресс (S.ts > 0);
+     'ok'/'empty' — облако прочитано: можно писать.
+     Бюджет: VK даёт 1000 вызовов Storage в час на пользователя. Раньше игра
+     тратила ~900/час и упиралась в лимит — после этого сохранения вставали.
+     Теперь: 1 вызов на запись, минимум 20 с между записями, максимум 200 в час,
+     и запись пропускается, если payload не изменился.                        */
   let cloudBoot = false, lastSyncAt = 0;
+  let cloudState = 'pending';      // pending | unknown | ok | empty | error
+  let pullStarted = false, pendingPush = false;
+  let lastPushAt = 0, lastPushed = null;
+  let pushHour = 0, pushCount = 0;
+  const PUSH_MIN_GAP = 20000;      // мс — минимальный интервал между записями в облако
+  const PUSH_HOUR_CAP = 200;       // записей в час (лимит VK — 1000 вызовов/час)
+  const SYNC_MIN_GAP = 30000;      // мс — минимальный интервал между чтениями облака
   const waiters = [];
   const onReady = fn => ready ? fn(gp) : waiters.push(fn);
 
@@ -1364,42 +1556,105 @@ const SDK = (() => {
   }
   const soundToggle = on => on ? (call('sounds','unmute') ?? call('sounds','unmuteSFX')) : (call('sounds','mute') ?? call('sounds','muteSFX'));
 
-  /* --- cloud saves: ОДНО player-поле 'save' --- */
+  /* --- cloud saves: ОДНО player-поле 'save' / VK Storage --- */
+  const onReadyP = () => new Promise(res => {
+    let done = false; const fin = g => { if (!done){ done = true; res(g); } };
+    onReady(fin); setTimeout(() => fin(gp || null), 8000);
+  });
+  function setCloudState(st){
+    cloudState = st; cloudBoot = true;
+    try { UI.cloudState(st, lastPushAt); } catch(e){}
+    if (pendingPush){ pendingPush = false; pushCloud(true); }
+  }
+  /* первичное чтение облака — ровно один раз за сессию, ДО любых записей */
   function pullCloud(){
-    onReady(async () => {
-      try{
-        const raw = gp.player && gp.player.get ? gp.player.get('save') : null;
-        if (raw) mergeCloud(JSON.parse(raw), BOOT_TS);
-      }catch(e){}
-      cloudBoot = true; pushCloud(true);
-    });
+    if (pullStarted) return Promise.resolve(false);
+    pullStarted = true;
+    return onReadyP().then(() => {
+      if (gp && gp.player && gp.player.get){
+        try{ const raw = gp.player.get('save'); if (raw) mergeCloud(JSON.parse(raw)); }catch(e){}
+        setCloudState('ok');
+        return true;
+      }
+      if (typeof VKB === 'undefined'){ setCloudState('empty'); return true; }
+      return new Promise(res => VKB.onReady(() => {
+        if (!VKB.inVK){ setCloudState('empty'); return res(true); }
+        VKB.load().then(cloud => {
+          const changed = mergeCloud(cloud);
+          if (changed){ saveLocal(); try{ UI.toast(L('syncLoaded'), '☁️'); }catch(e){} }
+          setCloudState(cloud ? 'ok' : 'empty');
+          res(true);
+        }).catch(() => { setCloudState('unknown'); res(false); });
+      }));
+    }).catch(() => { setCloudState('unknown'); return false; });
   }
   /* v1.9.4 (замечание модерации #3, п. 2.3.8): повторная синхронизация при возврате
      в игру (сменил устройство/платформу и вернулся): читаем облако, принимаем если
      оно новее, иначе пушим своё. Троттлинг 45 сек, до первичного слияния — нет. */
-  function syncNow(){
-    if (!cloudBoot) return;
-    const now = Date.now(); if (now - lastSyncAt < 45000) return; lastSyncAt = now;
-    try{
-      if (gp && gp.player && gp.player.get){ pullCloud(); return; }
-      if (typeof VKB !== 'undefined' && VKB.inVK){
-        VKB.load().then(cloud => {
-          if (mergeCloud(cloud)){ saveLocal(); UI.toast(L('syncLoaded'),'☁️'); }
-          else pushCloud(true);
-        }).catch(()=>{});
-      }
-    }catch(e){}
+  /* v2.0.0: повторная синхронизация при возврате в игру (сменил устройство —
+     вернулся). Читаем облако, сливаем, при необходимости пушим своё. */
+  function syncNow(force){
+    if (cloudState === 'pending') return;
+    const now = Date.now();
+    if (!force && now - lastSyncAt < SYNC_MIN_GAP) return;
+    lastSyncAt = now;
+    if (typeof VKB === 'undefined' || !VKB.inVK){ if (has()) pullCloud(); return; }
+    VKB.load().then(cloud => {
+      const changed = mergeCloud(cloud);
+      if (changed){ saveLocal(); try{ UI.toast(L('syncLoaded'), '☁️'); }catch(e){} }
+      setCloudState(cloud ? 'ok' : 'empty');
+      if (!changed) pushCloud(false);
+    }).catch(() => { setCloudState('error'); });
   }
-  const cloudBootDone = () => { cloudBoot = true; };
+  /* watchdog: если облако не прочиталось за 9 с — разрешаем запись, но только
+     реального прогресса (пустой сейв облако не затрёт) */
+  const cloudBootDone = () => { if (cloudState === 'pending') setCloudState('unknown'); };
   function pushCloud(force){
-    if (!force && !gp && !(typeof VKB !== 'undefined' && VKB.inVK)) return;
-    if (!force && !cloudBoot) return;   /* v1.9.4: сначала читаем и сливаем облако, потом пишем */
+    const payload = () => { try{ return JSON.stringify(S); }catch(e){ return null; } };
+    /* пока облако не прочитано — не пишем ни при каких условиях */
+    if (cloudState === 'pending'){ pendingPush = true; return; }
+    /* облако прочитать не удалось: не рискуем затереть прогресс пустым сейвом */
+    if (cloudState === 'unknown' && (S.ts||0) === 0) return;
+    const now = Date.now();
+    if (!force && now - lastPushAt < PUSH_MIN_GAP) return;
+    const h = Math.floor(now / 3600000);
+    if (h !== pushHour){ pushHour = h; pushCount = 0; }
+    if (!force && pushCount >= PUSH_HOUR_CAP) return;
+    const str = payload();
+    if (!str) return;
+    /* ничего не изменилось — вызов не тратим (для force — только если уже
+       писали менее 5 с назад: beforeunload и pagehide приходят парой) */
+    if (str === lastPushed && (now - lastPushAt) < (force ? 5000 : Infinity)) return;
+    const done = () => { lastPushed = str; lastPushAt = Date.now(); pushCount++;
+                         try{ UI.cloudState('ok', lastPushAt); }catch(e){} };
+    const run = () => {
+      try{
+        if (gp && gp.player && gp.player.set){
+          gp.player.set('save', str); if (gp.player.sync) gp.player.sync();
+          return done();
+        }
+      }catch(e){}
+      if (typeof VKB !== 'undefined' && VKB.inVK){
+        VKB.onReady(() => VKB.save(str).then(ok => ok ? done() : setCloudState('error')));
+      }
+    };
     clearTimeout(cloudTimer);
-    cloudTimer = setTimeout(() => {
-      onReady(() => { try{ if (gp && gp.player && gp.player.set){ gp.player.set('save', JSON.stringify(S)); gp.player.sync && gp.player.sync(); } }catch(e){} });
-      if (!has() && typeof VKB !== 'undefined') VKB.onReady(() => { VKB.save(JSON.stringify(S)).catch(()=>{}); });
-    }, 700);
+    if (force) run(); else cloudTimer = setTimeout(run, 700);
   }
+  /* ручная синхронизация по кнопке в настройках (правила VK: игрок и модератор
+     должны ВИДЕТЬ, что прогресс синхронизируется) */
+  function syncManual(){
+    if (typeof VKB === 'undefined' || !VKB.inVK){ return Promise.resolve(false); }
+    try{ UI.cloudState('pending', 0); }catch(e){}
+    return VKB.load().then(cloud => {
+      const changed = mergeCloud(cloud);
+      if (changed){ saveLocal(); try{ UI.toast(L('syncLoaded'), '☁️'); }catch(e){} }
+      setCloudState(cloud ? 'ok' : 'empty');
+      lastPushed = null; pushCloud(true);
+      return true;
+    }).catch(() => { setCloudState('error'); return false; });
+  }
+  const cloudInfo = () => ({state: cloudState, lastPushAt, pushCount});
 
   /* --- ads events → автопауза --- */
   function bindAds(){
@@ -1411,6 +1666,7 @@ const SDK = (() => {
 
   return {inject, onReady, has, lang, gameStart, gameStop, gameplayStart, gameplayStop,
           preloadAd, interstitial, rewarded, prerollCheck, banner, swipe, soundToggle, pushCloud, syncNow, cloudBootDone, adsPlaying,
+          syncManual, cloudInfo, pullCloud,
           get gp(){ return gp; }, get ready(){ return ready; }};
 })();
 
@@ -1692,7 +1948,27 @@ const UI = (() => {
     e.textContent = SDK.has() ? 'SDK ✓' : (VKB.inVK ? 'VK Bridge ✓' : 'offline (fallback)');
     /* v1.9.4 (п. 2.3.8): видимый статус синхронизации в настройках */
     const sv = $('syncVal'); if (sv) sv.textContent = VKB.inVK ? L('syncVk') : L('syncWeb');
+    cloudState();
   }
+  /* v2.0.0: живой статус облака в настройках. Модератор и игрок должны ВИДЕТЬ,
+     что прогресс реально уходит в облако VK и возвращается из него. */
+  function cloudState(st, ts){
+    const sv = $('syncVal'); if (!sv) return;
+    if (!VKB.inVK && !SDK.has()){ sv.textContent = L('syncWeb'); sv.style.color = ''; return; }
+    if (st) lastCloudState = st;
+    if (ts) lastCloudTs = ts;
+    const s = st || lastCloudState;
+    let txt = L('syncVk'), color = '#8bf0ac';
+    if (s === 'pending'){ txt = L('syncWait'); color = '#ffd64d'; }
+    else if (s === 'error'){ txt = L('syncErr'); color = '#ff7b7b'; }
+    else if (s === 'ok' && lastCloudTs){
+      const d = new Date(lastCloudTs);
+      txt = L('syncDone') + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    }
+    else if (s === 'empty'){ txt = L('syncVk'); }
+    sv.textContent = txt; sv.style.color = color;
+  }
+  let lastCloudState = 'pending', lastCloudTs = 0;
 
   /* ---------- modals ---------- */
   function modal(id){
@@ -1981,7 +2257,7 @@ const UI = (() => {
     if (curScreen==='scr-map') renderMap(); if (curScreen==='scr-start') renderStartMeta(); }
 
   return {show, screen, modal, closeModal, topModal, toast, banner, dust, stars, soundBtn,
-          sdkState, applyLang, setLang, renderMap, openShop, openCollection, openQuests,
+          sdkState, cloudState, applyLang, setLang, renderMap, openShop, openCollection, openQuests,
           openAchv, openSettings, openHelp, openLog, openStats, openTry, logBadge,
           confirm: confirmBox, confirmBox, questBadge, fullRefresh,
           get cfCb(){ return cfCb; }, set cfCb(v){ cfCb = v; }};
@@ -2111,6 +2387,20 @@ function wireUI(){
   /* документы + поддержка (доступны из настроек; экрана-согласия нет) */
   $('btnPrivacy').onclick = () => { Audio.sfx.click(); openLegal('privacy'); };
   $('btnTerms').onclick = () => { Audio.sfx.click(); openLegal('terms'); };
+  /* v2.0.0: кнопка ручной синхронизации — прогресс в облако/из облака по нажатию.
+     Показывается только внутри VK: вне платформы облака нет и кнопка бы врала. */
+  const bSync = $('btnSyncNow');
+  if (bSync){
+    const showSyncBtn = () => { try{ bSync.style.display = VKB.inVK ? '' : 'none'; }catch(e){} };
+    bSync.onclick = () => {
+      Audio.sfx.click();
+      bSync.disabled = true;
+      SDK.syncManual().then(ok => {
+        try{ UI.toast(ok ? L('syncOk2') : L('syncErr'), '☁️'); }catch(e){}
+      }).catch(()=>{}).then(() => { setTimeout(()=>{ bSync.disabled = false; }, 1200); });
+    };
+    showSyncBtn(); VKB.onReady(showSyncBtn);
+  }
   const sv = $('supportVal');   /* v1.9.3 (R1): e-mail либо «Поддержка» в VK */
   if (sv){ if (SUPPORT_CONTACT) sv.textContent = SUPPORT_CONTACT;
     else { sv.setAttribute('data-l','supViaVk'); sv.textContent = L('supViaVk'); } }
@@ -3322,6 +3612,23 @@ const META = (() => {
   }
 
   /* ---------- result modal ---------- */
+  /* v2.0.0: итог считает анимация до resTarget. Раньше анимация писала totalV
+     напрямую и ЗАТИРАЛА удвоение от «×2 за видео», если игрок нажимал кнопку
+     в первые 900 мс — игрок не видел, что награда вообще выросла.           */
+  let resTarget = 0, resShown = 0, resAnim = 0;
+  function countUpTotal(ms){
+    try{ cancelAnimationFrame(resAnim); }catch(e){}
+    const from = resShown, t0 = performance.now();
+    const tick = () => {
+      const k = Math.min(1, (performance.now() - t0) / ms);
+      const e = 1 - Math.pow(1 - k, 3);
+      resShown = from + (resTarget - from) * e;
+      const el = $('resTotal');
+      if (el) el.textContent = '+' + Math.round(resShown).toLocaleString(LANG==='ru'?'ru-RU':'en-US') + ' ✦';
+      if (k < 1) resAnim = requestAnimationFrame(tick);
+    };
+    resAnim = requestAnimationFrame(tick);
+  }
   function showResult(win, R){
     UI.modal('m-result');
     const G = GAME.G;
@@ -3417,7 +3724,8 @@ const META = (() => {
           S.dust += bonus; UI.dust(); saveLocal();
           Audio.sfx.deliver();
           const loc = LANG==='ru'?'ru-RU':'en-US';
-          const el = $('resTotal'); if (el) el.textContent = '+' + Math.round(totalV*2).toLocaleString(loc) + ' ✦';
+          resTarget = Math.round(totalV*2);   // v2.0.0: итог доезжает до удвоенной суммы
+          countUpTotal(700);
           UI.toast('🎬 +' + bonus.toLocaleString(loc) + ' ✦', '✦');
           x2b.remove();
         });
@@ -3429,14 +3737,8 @@ const META = (() => {
       const d = document.createElement('div'); d.className = 'rrow totalRow';
       d.innerHTML = `<span>${L('total')}</span><b id="resTotal" style="color:#ffd64d">+0 ✦</b>`;
       bb.insertBefore(d, bb.firstChild);
-      const t0 = performance.now();
-      const tick = () => {
-        const k = Math.min(1, (performance.now()-t0)/900);
-        const e2 = 1-Math.pow(1-k,3);
-        const el = $('resTotal'); if (el) el.textContent = '+' + Math.round(totalV*e2).toLocaleString(LANG==='ru'?'ru-RU':'en-US') + ' ✦';
-        if (k < 1) requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
+      resTarget = totalV; resShown = 0;
+      countUpTotal(900);
       setTimeout(()=>{ Audio.sfx.deliver(); GAME.confetti(GAME.W/2, GAME.H*0.3, 50); }, 200);
     }
     UI.questBadge(); UI.dust();
@@ -3621,16 +3923,14 @@ async function boot(){
   GAME.init();
   SDK.inject();
   VKB.inject();
+  /* v2.0.0 (SYNC-FIX #5): облако читается ОДИН раз из SDK.pullCloud() и строго
+     ДО первой записи. Здесь, в VKB.onReady, остаётся только язык: чтение и запись
+     сохранений больше не перемешаны с инициализацией моста. */
   VKB.onReady(() => {
     if (SDK.has() || !VKB.inVK) return;
     VKB.lang().then(l => { if (l && !S.set.lang && l !== LANG) UI.setLang(l); });   // 3.1.2: язык ВКонтакте, иначе русский
-    VKB.load().then(cloud => {
-      /* v1.9.4 (п. 2.3.8): сливаем облако ДО любых пушей; факт синхронизации видим */
-      if (mergeCloud(cloud, BOOT_TS)) UI.toast(L('syncLoaded'),'☁️');
-      SDK.cloudBootDone(); UI.sdkState(); saveLocal();
-    });
-    setTimeout(() => SDK.cloudBootDone(), 9000);   /* watchdog: если хранилище недоступно */
   });
+  setTimeout(() => SDK.cloudBootDone(), 9000);   /* watchdog: если хранилище недоступно */
   SDK.onReady(gp => {
     if (gp && gp.language && !S.set.lang){
       const l = gp.language === 'ru' ? 'ru' : 'en';
@@ -3659,11 +3959,15 @@ async function boot(){
   /* free chests reminder */
   setTimeout(()=>{ if (META.freeChestCount() > 0) UI.toast('🎁 ' + L('chestShop') + ': ' + META.freeChestCount(), '📦'); }, 1200);
 }
-window.addEventListener('beforeunload', () => { saveLocal(); SDK.gameStop(); });
+/* v2.0.0 (SYNC-FIX #6): КАЖДАЯ точка выхода из игры принудительно сливает
+   прогресс в облако VK. Раньше при закрытии/сворачивании уходил только
+   локальный сейв — поэтому на другом устройстве игрок видел старый прогресс. */
+const flushAll = () => { try{ saveLocal(); }catch(e){} try{ SDK.pushCloud(true); }catch(e){} };
+window.addEventListener('beforeunload', () => { flushAll(); SDK.gameStop(); });
+window.addEventListener('pagehide', () => { flushAll(); });
 /* правила VK 2.2.5: звук не должен продолжать играть после закрытия/сворачивания */
-document.addEventListener('visibilitychange', () => { if (document.hidden) Audio.suspendAll(); });
-/* v1.9.4 (замечание модерации #3, п. 2.3.8): вернулись в игру после другого
-   устройства/платформы — подтягиваем свежий прогресс из облака (троттлинг 45с). */
+document.addEventListener('visibilitychange', () => { if (document.hidden){ Audio.suspendAll(); flushAll(); } });
+/* v2.0.0: вернулись в игру (сменили устройство/платформу) — подтягиваем облако */
 document.addEventListener('visibilitychange', () => { if (!document.hidden) SDK.syncNow(); });
 setInterval(() => { try{ saveLocal(); }catch(e){} }, 8000);   // автосейв: VK может закрыть iframe без beforeunload
 document.addEventListener('pointerdown', () => Audio.resume(), {once:true});
